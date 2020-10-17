@@ -2,9 +2,9 @@
 #define MapPoint_h
 
 #include "opencv2/core/types.hpp"
+#include <algorithm>
 #include "Map.h"
-
-class Frame;
+#include "Frame.h"
 
 class MapPoint {
 
@@ -18,7 +18,9 @@ public:
 
     MapPoint(Map* pointMap, const cv::Point2f& point, const cv::Scalar& color, int id = -1);
 
-    cv::Point3f homogeneous();
+    cv::Vec3f homogeneous();
+    void remove();
+    void add_observation(Frame& frame, int index);
 
 
 };

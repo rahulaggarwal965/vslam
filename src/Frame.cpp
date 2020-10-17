@@ -6,5 +6,7 @@ K(K), pose(pose) {
     if (!image.empty()) {
         extract_key_points(image, keypoints, descriptors);
         //TODO: NORMALIZE KEY POINTS
+
+        mapPoints.resize(keypoints.size(), NULL);
     }
 }

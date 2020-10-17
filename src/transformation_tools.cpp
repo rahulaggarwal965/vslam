@@ -1,16 +1,9 @@
 #include "transformation_tools.h"
 
-//TODO: refactor
-void poseFromRotationTranslation(const cv::Mat& rotation, const cv::Mat& translation, cv::Mat& pose) {
-    pose = cv::Mat::eye(4, 4, CV_32FC1);
-    rotation.copyTo(pose(cv::Rect(cv::Point(0, 0), rotation.size())));
-    pose.col(3) = translation;
-}
-
-void fundamentalMatrixToRotationTranslation(const cv::Mat& fundamental, cv::Mat& K, cv::Mat& rotation, cv::Mat& translation) {
+void fundamentalMatrixToPose(const cv::Mat& fundamental_matrix, const cv::Mat& K, cv::Mat& pose) {
     cv::Mat K_t;
     cv::transpose(K, K_t);
-    cv::Mat essential = K_t * fundamental * K;
+    cv::Mat essential = K_t * fundamental_matrix * K;
     //TODO: investigate Recover Pose
 
     float data[9] = {0, -1, 0, 1, 0, 0, 0, 0, 1};
@@ -23,6 +16,8 @@ void fundamentalMatrixToRotationTranslation(const cv::Mat& fundamental, cv::Mat&
     if (cv::determinant(Vt) < 0) {
         Vt *= -1.0;
     }
-    rotation = U * W * Vt;
-    translation = U.col(2).clone();
+    pose = cv::Mat::eye(4, 4, CV_32FC1);
+    //TODO: maybe bug
+    pose(cv::Range(0, 3), cv::Range(0, 3)) = U * W * Vt;
+    pose(cv::Range(0, 3), cv::Range(3, 4))  = U.col(2).clone();
 }

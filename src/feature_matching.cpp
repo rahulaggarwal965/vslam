@@ -1,5 +1,6 @@
 #include "feature_matching.h"
 #include "opencv2/calib3d.hpp"
+#include "transformation_tools.h"
 
 #define M_DISTANCE_RATIO 0.7
 
@@ -13,7 +14,7 @@ void extract_key_points(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoin
 }
 
 //TODO: refactor, very inefficient
-void match_frames(const Frame& frame1, const Frame& frame2, std::vector<int> idx1, std::vector<int> idx2, cv::Mat& fundamental_matrix) {
+void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, std::vector<int>& idx1, std::vector<int>& idx2, cv::Mat& pose) {
     cv::Ptr<cv::BFMatcher> bfmatcher = cv::BFMatcher::create(cv::NORM_HAMMING);
     std::vector<std::vector<cv::DMatch>> initialMatches;
     bfmatcher->knnMatch(frame1.descriptors, frame2.descriptors, initialMatches, 2);
@@ -47,10 +48,12 @@ void match_frames(const Frame& frame1, const Frame& frame2, std::vector<int> idx
     assert(sIndexes2.size() == indexes2.size());
 
     cv::Mat mask;
+    cv::Mat fundamental_matrix;
     //TODO: tune parameters
     //Must be 8 or more matches
     //Fundamental
     fundamental_matrix = cv::findFundamentalMat(matched_kp1, matched_kp2, cv::FM_RANSAC, 3, 0.99, mask);
+    fundamentalMatrixToPose(fundamental_matrix, K, pose);
 
     idx1.reserve(idx1.size());
     idx2.reserve(idx2.size());
