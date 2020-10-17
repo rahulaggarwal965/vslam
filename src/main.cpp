@@ -1,5 +1,4 @@
-#include "transformation_tools.h"
-#include "Map.h"
+#include "Slam.h"
 
 int main(int argc, char **argv) {
     return 0;
