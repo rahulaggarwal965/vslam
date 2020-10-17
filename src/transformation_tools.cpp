@@ -3,7 +3,9 @@
 void fundamentalMatrixToPose(const cv::Mat& fundamental_matrix, const cv::Mat& K, cv::Mat& pose) {
     cv::Mat K_t;
     cv::transpose(K, K_t);
-    cv::Mat essential = K_t * fundamental_matrix * K;
+    cv::Mat F;
+    fundamental_matrix.convertTo(F, CV_32FC1);
+    cv::Mat essential = K_t * F * K;
     //TODO: investigate Recover Pose
 
     float data[9] = {0, -1, 0, 1, 0, 0, 0, 0, 1};

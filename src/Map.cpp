@@ -5,7 +5,7 @@ int Map::add_point(MapPoint& mapPoint) {
     return this->maxPoint++;
 }
 
-int Map::add_frame(Frame& frame) {
-    this->frames.push_back(&frame);
+int Map::add_frame(std::shared_ptr<Frame> frame) {
+    this->frames.push_back(frame);
     return this->maxFrame++;
 }

@@ -7,14 +7,14 @@
 Slam::Slam(int W, int H, const cv::Mat& K) : point_map(), K(K), W(W), H(H) {}
 
 void Slam::process_frame(const cv::Mat &image) {
-    Frame frame(image, K);
-    frame.id = point_map->add_frame(frame);
+    auto frame = std::make_shared<Frame>(image, K);
+    frame->id = point_map.add_frame(frame);
 
-    if (frame.id == 0) return;
+    if (frame->id == 0) return;
 
-    size_t num_frames = point_map->frames.size();
-    Frame *frame1 = point_map->frames[num_frames - 1];
-    Frame *frame2 = point_map->frames[num_frames - 2];
+    size_t num_frames = point_map.frames.size();
+    auto frame1 = point_map.frames[num_frames - 1];
+    auto frame2 = point_map.frames[num_frames - 2];
 
     std::vector<int> idx1, idx2;
     cv::Mat pose, Rt_i;
@@ -23,7 +23,7 @@ void Slam::process_frame(const cv::Mat &image) {
 
     for (size_t i = 0; i < idx2.size(); i++) {
         if (frame2->mapPoints[idx2[i]] != NULL && frame1->mapPoints[idx1[i]] == NULL) {
-            frame2->mapPoints[idx2[i]]->add_observation(*frame1, idx1[i]);
+            frame2->mapPoints[idx2[i]]->add_observation(frame1, idx1[i]);
         }
     }
 
@@ -36,13 +36,14 @@ void Slam::process_frame(const cv::Mat &image) {
         //TODO: Kinematic Model, constant velocity
     /* } */
 
+
     int projection_point_count = 0;
 
-    if (size_t s = point_map->mapPoints.size() > 0) {
+    if (size_t s = point_map.mapPoints.size() > 0) {
         //TODO: refactor to matrix operations (don't use homogeneous)
         cv::Mat mapPoints(3, s, CV_32FC1);
         for (size_t i = 0; i < s; i++) {
-            mapPoints.col(i) = point_map->mapPoints[i]->homogeneous();
+            mapPoints.col(i) = point_map.mapPoints[i]->homogeneous();
         }
         cv::Mat projections = (K * frame1->pose(cv::Range(0, 3), cv::Range(0, 3))) * mapPoints;
         std::vector<cv::Vec2f> projectionPoints;
@@ -63,16 +64,16 @@ void Slam::process_frame(const cv::Mat &image) {
         frame1->generate_kdtree();
         for (size_t i = 0; i < s; i++) {
             if (!goodPoints[i]) continue;
-            if (std::find(point_map->mapPoints[i]->frames.begin(), point_map->mapPoints[i]->frames.end(), frame1) != point_map->mapPoints[i]->frames.end()) {
+            if (std::find(point_map.mapPoints[i]->frames.begin(), point_map.mapPoints[i]->frames.end(), frame1) != point_map.mapPoints[i]->frames.end()) {
                 continue;
             }
             std::vector<int> indices;
             frame1->kdtree.radiusSearch(projectionPoints[i], indices, cv::Mat(), 2, 500);
             for (size_t j = 0; j < indices.size(); j++) {
                 if (frame1->mapPoints[indices[j]] == NULL) {
-                    double dist = point_map->mapPoints[i]->orb_distance(frame1->descriptors.row(indices[j]));
+                    double dist = point_map.mapPoints[i]->orb_distance(frame1->descriptors.row(indices[j]));
                     if (dist < 64.0) {
-                        point_map->mapPoints[i]->add_observation(*frame1, indices[j]);
+                        point_map.mapPoints[i]->add_observation(frame1, indices[j]);
                         projection_point_count++;
                         break;
                     }
@@ -140,8 +141,8 @@ void Slam::process_frame(const cv::Mat &image) {
                 color = image.at<cv::Scalar>(y, x);
             }
             MapPoint p(point_map, points_4d.col(i).rowRange(0, 3), color);
-            p.add_observation(*frame2, idx2[i]);
-            p.add_observation(*frame1, idx1[i]);
+            p.add_observation(frame2, idx2[i]);
+            p.add_observation(frame1, idx1[i]);
             np_count++;
 
             //TODO: Optimize

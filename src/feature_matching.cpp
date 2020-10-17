@@ -10,7 +10,7 @@ void extract_key_points(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoin
     cv::Ptr<cv::ORB> orb_feature_detector = cv::ORB::create(3000);
 
     orb_feature_detector->detectAndCompute(image, cv::Mat(), keypoints, descriptors);
-    printf("# Keypoints found in first image: %zu", keypoints.size());
+    /* printf("# Keypoints found in first image: %zu", keypoints.size()); */
 }
 
 //TODO: refactor, very inefficient
@@ -27,12 +27,12 @@ void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, st
     for (auto m : initialMatches) {
         if (m[0].distance < m[1].distance * M_DISTANCE_RATIO) {
             cv::KeyPoint kp1 = frame1.keypoints[m[0].queryIdx];
-            cv::KeyPoint kp2 = frame1.keypoints[m[0].trainIdx];
+            cv::KeyPoint kp2 = frame2.keypoints[m[0].trainIdx];
 
             //TODO: Tune distance threshold
             if (m[0].distance < 32) {
                 //Refactor
-                if (sIndexes1.find(m[0].queryIdx) != sIndexes1.end() && sIndexes2.find(m[0].trainIdx) != sIndexes2.end()) {
+                if (sIndexes1.find(m[0].queryIdx) == sIndexes1.end() && sIndexes2.find(m[0].trainIdx) == sIndexes2.end()) {
                     indexes1.push_back(m[0].queryIdx);
                     indexes2.push_back(m[0].trainIdx);
                     sIndexes1.insert(m[0].queryIdx);
@@ -63,4 +63,5 @@ void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, st
             idx2.push_back(indexes2[i]);
         }
     }
+    printf("Matches: %d -> %zu -> %zu\n", frame1.descriptors.rows, initialMatches.size(), idx1.size());
 }

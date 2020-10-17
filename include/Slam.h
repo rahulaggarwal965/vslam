@@ -10,7 +10,7 @@
 class Slam {
 
 public:
-    Map *point_map;
+    Map point_map;
     cv::Mat K;
     int W, H;
 

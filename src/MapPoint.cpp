@@ -1,8 +1,7 @@
 #include "MapPoint.h"
-#include "opencv2/core/base.hpp"
 
-MapPoint::MapPoint(Map *pointMap, const cv::Vec3f& point, const cv::Scalar& color, int id) : point(point), color(color) {
-    this->id = (id != -1) ? id : pointMap->add_point(*this);
+MapPoint::MapPoint(Map& pointMap, const cv::Vec3f& point, const cv::Scalar& color, int id) : point(point), color(color) {
+    this->id = (id != -1) ? id : pointMap.add_point(*this);
 }
 
 cv::Vec3f MapPoint::homogeneous() {
@@ -27,10 +26,10 @@ double MapPoint::orb_distance(const cv::Mat& descriptor) {
     return min;
 }
 
-void MapPoint::add_observation(Frame& frame, int index) {
-    if (frame.mapPoints[index] == NULL && std::find(frames.begin(), frames.end(), &frame) != frames.end()) {
-        frame.mapPoints[index] = this;
-        frames.push_back(&frame);
+void MapPoint::add_observation(std::shared_ptr<Frame> frame, int index) {
+    if (frame->mapPoints[index] == NULL && std::find(frames.begin(), frames.end(), frame) != frames.end()) {
+        frame->mapPoints[index] = this;
+        frames.push_back(frame);
         indexes.push_back(index);
     }
 }

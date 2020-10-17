@@ -10,6 +10,8 @@
 //TODO: this is really fucking ugly
 void extract_key_points(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 
+class MapPoint;
+
 class Frame {
 
 public:
@@ -23,6 +25,7 @@ public:
 
   Frame(const cv::Mat &image, const cv::Mat &K,
         const cv::Mat pose = cv::Mat::eye(4, 4, CV_32FC1));
+  void draw(const cv::Mat& image, cv::Mat& drawn);
   void generate_kdtree();
 
   /* cv::ml::KD */
