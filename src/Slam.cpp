@@ -1,4 +1,5 @@
 #include "Slam.h"
+#include "opencv2/calib3d.hpp"
 
 Slam::Slam(int W, int H, const cv::Mat& K) : point_map(), K(K), W(W), H(H) {}
 
@@ -56,12 +57,35 @@ void Slam::process_frame(const cv::Mat &image) {
                 goodPoints.push_back(false);
             }
         }
+        frame1->generate_kdtree();
         for (int i = 0; i < s; i++) {
             if (!goodPoints[i]) continue;
             if (std::find(point_map->mapPoints[i]->frames.begin(), point_map->mapPoints[i]->frames.end(), frame1) != point_map->mapPoints[i]->frames.end()) {
                 continue;
             }
+            std::vector<int> indices;
+            frame1->kdtree.radiusSearch(projectionPoints[i], indices, cv::Mat(), 2, 500);
+            for (int j = 0; j < indices.size(); j++) {
+                if (frame1->mapPoints[indices[j]] == NULL) {
+                    double dist = point_map->mapPoints[i]->orb_distance(frame1->descriptors.row(indices[j]));
+                    if (dist < 64.0) {
+                        point_map->mapPoints[i]->add_observation(*frame1, indices[j]);
+                        projection_point_count++;
+                        break;
+                    }
+                }
+            }
         }
+
+        std::vector<bool> others;
+        for (int i : idx1) {
+            if (frame1->mapPoints[i] == NULL) {
+                others.push_back(true);
+            } else {
+                others.push_back(false);
+            }
+        }
+        cv::triangulatePoints(frame1->pose.rowRange(0, 3), frame2->pose.rowRange(0, 3), frame1->, InputArray projPoints2, OutputArray points4D)
     }
 
 }

@@ -20,6 +20,7 @@ public:
 
     cv::Vec3f homogeneous();
     void remove();
+    double orb_distance(const cv::Mat& descriptor);
     void add_observation(Frame& frame, int index);
 
 
