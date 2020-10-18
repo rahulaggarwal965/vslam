@@ -179,7 +179,7 @@ if __name__ == "__main__":
     F *= downscale
     H = int(H * downscale)
     W = 1024
-  out = cv2.VideoCapture('out.avi', -1, 20.0, (W, H))
+  out = cv2.VideoWriter('out.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 25.0, (W, H))
   print("using camera %dx%d with F %f" % (W,H,F))
 
   # camera intrinsics

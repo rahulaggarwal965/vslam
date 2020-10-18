@@ -74,6 +74,7 @@ class Map(object):
     with open(filename, 'w') as f:
         f.writelines(header)
         f.write('\n'.join(points))
+        f.write('\n')
 
   def deserialize(self, s):
     ret = json.loads(s)
