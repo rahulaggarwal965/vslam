@@ -186,9 +186,6 @@ if __name__ == "__main__":
   Kinv = np.linalg.inv(K)
 
   # create 2-D display
-  if os.getenv("HEADLESS") is None:
-    disp2d = Display2D(W, H)
-
   slam = SLAM(W, H, K)
 
   """
@@ -217,15 +214,16 @@ if __name__ == "__main__":
     else:
       break
 
-    # 3-D display
-    if disp3d is not None:
-      disp3d.paint(slam.mapp)
-
-    if disp2d is not None:
+    if os.getenv("HEADLESS") is not None:
       img = slam.mapp.frames[-1].annotate(frame)
-      disp2d.paint(img)
+      cv2.imshow('img', img)
+
+    if cv2.waitKey(16) & 0xFF == ord('q'):
+      break;
 
     i += 1
+    if (i == 100):
+        slam.mapp.to_ply('cloud.ply')
     """
     if i == 10:
       with open('map.json', 'w') as f:
@@ -235,5 +233,4 @@ if __name__ == "__main__":
   # with open('map.json', 'w') as f:
   #     f.write(slam.mapp.serialize())
   #     exit(0)
-  slam.mapp.to_ply('cloud.ply')
 
