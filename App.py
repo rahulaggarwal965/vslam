@@ -9,6 +9,8 @@ from werkzeug.exceptions import default_exceptions, HTTPException, InternalServe
 
 from flask_sqlalchemy import SQLAlchemy
 
+import cv2
+
 UPLOADS_FOLDER = 'static/uploads/'
 
 # CHANGE
