@@ -1,7 +1,7 @@
 #include "MapPoint.h"
 
 MapPoint::MapPoint(Map& pointMap, const cv::Vec3f& point, const cv::Scalar& color, int id) : point(point), color(color) {
-    this->id = (id != -1) ? id : pointMap.add_point(*this);
+    this->id = (id != -1) ? id : pointMap.add_point(this);
 }
 
 cv::Vec3f MapPoint::homogeneous() {

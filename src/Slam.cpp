@@ -19,6 +19,8 @@ void Slam::process_frame(const cv::Mat &image) {
     std::vector<int> idx1, idx2;
     cv::Mat pose, Rt_i;
 
+    frame1->normalize_keypoints();
+    frame2->normalize_keypoints();
     match_frames(*frame1, *frame2, K, idx1, idx2, pose);
 
     for (size_t i = 0; i < idx2.size(); i++) {
@@ -36,6 +38,7 @@ void Slam::process_frame(const cv::Mat &image) {
         //TODO: Kinematic Model, constant velocity
     /* } */
 
+    std::cout << "Pose = " << "\n" << " " << frame1->pose << "\n" << "\n";
 
     int projection_point_count = 0;
 
@@ -80,74 +83,84 @@ void Slam::process_frame(const cv::Mat &image) {
                 }
             }
         }
-
-        std::vector<bool> others;
-        others.reserve(idx1.size());
-        for (int i : idx1) {
-            if (frame1->mapPoints[i] == NULL) {
-                others.push_back(true);
-            } else {
-                others.push_back(false);
-            }
-        }
-
-        cv::Mat tPoints1(2, idx1.size(), CV_32FC1), tPoints2(2, idx2.size(), CV_32FC1);
-        //TODO: use normalized version
-        for (size_t i = 0; i < idx1.size(); i++) {
-            auto& point = frame1->keypoints[idx1[i]];
-            tPoints1.col(i) = cv::Vec2f(point.pt.x, point.pt.y);
-        }
-        for (size_t i = 0; i < idx2.size(); i++) {
-            auto& point = frame2->keypoints[idx2[i]];
-            tPoints2.col(i) = cv::Vec2f(point.pt.x, point.pt.y);
-        }
-
-        cv::Mat points_4d;
-        cv::triangulatePoints(frame1->pose.rowRange(0, 3), frame2->pose.rowRange(0, 3), tPoints1, tPoints2, points_4d);
-
-        for (size_t i = 0; i < others.size(); i++) {
-            float h = points_4d.at<float>(3, i);
-            others[i] = others[i] && (abs(h) != 0);
-            points_4d.col(i).rowRange(0, 3) /= h;
-        }
-
-        int np_count = 0;
-        for (int i = 0; i < points_4d.cols; i++) {
-            if (!others[i]) continue;
-            cv::Mat p11 = frame1->pose * points_4d.col(i);
-            cv::Mat p12 = frame2->pose * points_4d.col(i);
-            if (p11.at<float>(2) < 0 || p12.at<float>(2) < 0) continue;
-
-            //Reprojecting using intrinsic
-            cv::Mat projected_p1 = K * p11.rowRange(0, 3);
-            cv::Mat projected_p2 = K * p12.rowRange(0, 3);
-
-
-            //Checking the reprojective error
-            cv::Point pt = frame1->keypoints[idx1[i]].pt;
-            cv::Mat temp = (cv::Mat_<float>(2, 1) << pt.x, pt.y);
-            projected_p1 = (projected_p1.rowRange(0, 2) / projected_p1.row(2)) - temp;
-            pt = frame2->keypoints[idx2[i]].pt;
-            temp = (cv::Mat_<float>(2, 1) << pt.x, pt.y);
-            projected_p2 = (projected_p2.rowRange(0, 2) / projected_p2.row(2)) - temp;
-            float p1_sum = projected_p1.dot(projected_p1);
-            float p2_sum = projected_p2.dot(projected_p2);
-            if (p1_sum > 2 || p2_sum > 2) continue;
-
-            int x = (int) round(pt.x);
-            int y = (int) round(pt.y);
-            cv::Scalar color(0, 0, 255);
-            if (x > 0 && x < image.cols && y > 0 && y < image.rows) {
-                color = image.at<cv::Scalar>(y, x);
-            }
-            MapPoint p(point_map, points_4d.col(i).rowRange(0, 3), color);
-            p.add_observation(frame2, idx2[i]);
-            p.add_observation(frame1, idx1[i]);
-            np_count++;
-
-            //TODO: Optimize
-        }
-
     }
 
+    std::vector<bool> others;
+    others.reserve(idx1.size());
+    for (int i : idx1) {
+        if (frame1->mapPoints[i] == NULL) {
+            others.push_back(true);
+        } else {
+            others.push_back(false);
+        }
+    }
+
+    cv::Mat tPoints1(2, idx1.size(), CV_32FC1), tPoints2(2, idx2.size(), CV_32FC1);
+    //TODO: use normalized version
+    for (size_t i = 0; i < idx1.size(); i++) {
+        auto& point = frame1->normalized_points[idx1[i]];
+        tPoints1.col(i) = cv::Vec2f(point.x, point.y);
+        /* tPoints1.col(i) = frame1->normalized_points.col(idx1[i]); */
+    }
+    for (size_t i = 0; i < idx2.size(); i++) {
+        auto& point = frame2->normalized_points[idx2[i]];
+        tPoints2.col(i) = cv::Vec2f(point.x, point.y);
+        /* tPoints2.col(i) = frame2->normalized_points.col(idx2[i]); */
+    }
+
+    cv::Mat points_4d;
+    cv::triangulatePoints(frame1->pose.rowRange(0, 3), frame2->pose.rowRange(0, 3), tPoints1, tPoints2, points_4d);
+
+    for (size_t i = 0; i < others.size(); i++) {
+        float h = points_4d.at<float>(3, i);
+        others[i] = others[i] && (abs(h) != 0);
+        points_4d.col(i).rowRange(0, 3) /= h;
+    }
+
+    int np_count = 0;
+    for (int i = 0; i < points_4d.cols; i++) {
+        if (!others[i]) continue;
+        cv::Mat p11 = frame1->pose * points_4d.col(i);
+        cv::Mat p12 = frame2->pose * points_4d.col(i);
+        if (p11.at<float>(2) < 0 || p12.at<float>(2) < 0) continue;
+
+        //Reprojecting using intrinsic
+        cv::Mat projected_p1 = K * p11.rowRange(0, 3);
+        cv::Mat projected_p2 = K * p12.rowRange(0, 3);
+
+
+        //Checking the reprojective error
+        cv::Point2f pt = frame1->keypoints[idx1[i]].pt;
+        cv::Mat temp = (cv::Mat_<float>(2, 1) << pt.x, pt.y);
+        /* cv::Mat pt = frame2->normalized_points.col(idx2[i]); */
+        /* cv::Mat pp2_n = (projected_p2.rowRange(0, 2) / projected_p2.at<float>(2)) - pt; */
+        cv::Mat pp2_n = (projected_p2.rowRange(0, 2) / projected_p2.at<float>(2)) - temp;
+        pt = frame2->keypoints[idx2[i]].pt;
+        temp = (cv::Mat_<float>(2, 1) << pt.x, pt.y);
+        /* pt = frame1->normalized_points.col(idx1[i]); */
+        /* cv::Mat pp1_n = (projected_p1.rowRange(0, 2) / projected_p1.at<float>(2)) - pt; */
+        cv::Mat pp1_n = (projected_p1.rowRange(0, 2) / projected_p1.at<float>(2)) - temp;
+        float p1_sum = pp1_n.dot(pp1_n);
+        float p2_sum = pp2_n.dot(pp2_n);
+        if (p1_sum > 2 || p2_sum > 2) continue;
+
+        /* int x = (int) round(pt.at<float>(0)); */
+        /* int y = (int) round(pt.at<float>(1)); */
+        int x = (int) round(pt.x);
+        int y = (int) round(pt.y);
+        cv::Scalar color(0, 0, 255);
+        if (x > 0 && x < image.cols && y > 0 && y < image.rows) {
+            color = image.at<cv::Scalar>(y, x);
+        }
+        MapPoint p(point_map, points_4d.col(i).rowRange(0, 3), color);
+        p.add_observation(frame2, idx2[i]);
+        p.add_observation(frame1, idx1[i]);
+        np_count++;
+
+        //TODO: Optimize
+    }
+
+    printf("Added %d new points, %d projection points\n", np_count, projection_point_count);
+
 }
+

@@ -18,7 +18,7 @@ public:
     /* void serialize(char** filepath); */
     /* void deserialize(char** filepath); */
 
-    int add_point(MapPoint& mapPoint);
+    int add_point(MapPoint* mapPoint);
     int add_frame(std::shared_ptr<Frame> frame);
 
 };

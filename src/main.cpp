@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     const char * vName = argv[1];
     cv::VideoCapture cap(vName);
     int W = (int) cap.get(cv::CAP_PROP_FRAME_WIDTH);
-    int H = (int) cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    int H = (int) cap.get(cv::CAP_PROP_FRAME_HEIGHT);
     int CNT = (int) cap.get(cv::CAP_PROP_FRAME_COUNT);
 
     //TODO: calibrate?
@@ -32,13 +32,13 @@ int main(int argc, char **argv) {
 
         slam.process_frame(frame);
 
-        /* cv::Mat drawn; */
-        /* slam.point_map.frames[slam.point_map.frames.size() - 1]->draw(frame, drawn); */
-        /* cv::imshow("2d", drawn); */
+        cv::Mat drawn;
+        slam.point_map.frames[slam.point_map.frames.size() - 1]->draw(frame, drawn);
+        //cv::imshow("2d", drawn);
 
         frame_cnt++;
 
-        /* if (cv::waitKey(0) == 113) { */
+        /* if (cv::waitKey(33) == 26) { */
         /*     break; */
         /* } */
     }

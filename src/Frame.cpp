@@ -1,5 +1,5 @@
 #include "Frame.h"
-#include "opencv2/imgproc.hpp"
+#include "MapPoint.h"
 
 Frame::Frame(const cv::Mat& image, const cv::Mat& K, const cv::Mat pose) :
 K(K), pose(pose) {
@@ -13,6 +13,7 @@ K(K), pose(pose) {
 }
 
 void Frame::draw(const cv::Mat& image, cv::Mat& drawn) {
+    image.copyTo(drawn);
     for (size_t i = 0; i < keypoints.size(); i++) {
         cv::Point2f pt = keypoints[i].pt;
         int u = (int) round(pt.x), v = (int) round(pt.y);
@@ -25,6 +26,17 @@ void Frame::draw(const cv::Mat& image, cv::Mat& drawn) {
             /* std::vector<cv::Point> */
         }
     }
+}
+
+void Frame::normalize_keypoints() {
+    cv::Mat t;
+    normalize(keypoints, normalized_points, t);
+    /* points.reserve(keypoints.size()); */
+    /* for (auto& keypoint : keypoints) { */
+    /*     points.push_back(keypoint.pt); */
+    /* } */
+    /* normalize(K_inv, points, normalized_points); */
+
 }
 
 void Frame::generate_kdtree() {

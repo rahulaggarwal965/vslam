@@ -10,7 +10,7 @@ void extract_key_points(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoin
     cv::Ptr<cv::ORB> orb_feature_detector = cv::ORB::create(3000);
 
     orb_feature_detector->detectAndCompute(image, cv::Mat(), keypoints, descriptors);
-    /* printf("# Keypoints found in first image: %zu", keypoints.size()); */
+    //printf("# Keypoints found in first image: %zu", keypoints.size());
 }
 
 //TODO: refactor, very inefficient
@@ -26,8 +26,10 @@ void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, st
 
     for (auto m : initialMatches) {
         if (m[0].distance < m[1].distance * M_DISTANCE_RATIO) {
-            cv::KeyPoint kp1 = frame1.keypoints[m[0].queryIdx];
-            cv::KeyPoint kp2 = frame2.keypoints[m[0].trainIdx];
+            cv::Point2f kp1 = frame1.normalized_points[m[0].queryIdx];
+            cv::Point2f kp2 = frame2.normalized_points[m[0].trainIdx];
+            /* cv::Point2f kp2(frame1.normalized_points.at<float>(0, m[0].trainIdx), frame1.normalized_points.at<float>(1, m[0].trainIdx)); */
+            //cv::Mat kp2 = frame2.normalized_points.col(m[0].trainIdx);
 
             //TODO: Tune distance threshold
             if (m[0].distance < 32) {
@@ -37,8 +39,8 @@ void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, st
                     indexes2.push_back(m[0].trainIdx);
                     sIndexes1.insert(m[0].queryIdx);
                     sIndexes2.insert(m[0].trainIdx);
-                    matched_kp1.push_back(kp1.pt);
-                    matched_kp2.push_back(kp2.pt);
+                    matched_kp1.push_back(kp1);
+                    matched_kp2.push_back(kp2);
                 }
             }
         }
@@ -53,7 +55,9 @@ void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, st
     //Must be 8 or more matches
     //Fundamental
     fundamental_matrix = cv::findFundamentalMat(matched_kp1, matched_kp2, cv::FM_RANSAC, 3, 0.99, mask);
-    fundamentalMatrixToPose(fundamental_matrix, K, pose);
+    cv::Mat R, t;
+    fundamentalMatrixToRt(fundamental_matrix, K, R, t);
+    poseRt(R, t, pose);
 
     idx1.reserve(idx1.size());
     idx2.reserve(idx2.size());

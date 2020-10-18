@@ -1,7 +1,7 @@
 #include "Map.h"
 
-int Map::add_point(MapPoint& mapPoint) {
-    this->mapPoints.push_back(&mapPoint);
+int Map::add_point(MapPoint* mapPoint) {
+    this->mapPoints.push_back(mapPoint);
     return this->maxPoint++;
 }
 
