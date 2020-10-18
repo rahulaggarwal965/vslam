@@ -1,4 +1,5 @@
 #include "Slam.h"
+#include "Map.h"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/core/matx.hpp"
 #include "opencv2/core/types.hpp"
@@ -22,8 +23,8 @@ void Slam::process_frame(const cv::Mat &image) {
     match_frames(*frame1, *frame2, K, idx1, idx2, pose);
 
     for (size_t i = 0; i < idx2.size(); i++) {
-        if (frame2->mapPoints[idx2[i]] != NULL && frame1->mapPoints[idx1[i]] == NULL) {
-            frame2->mapPoints[idx2[i]]->add_observation(frame1, idx1[i]);
+        if (frame2->mapPoints[idx2[i]].lock() != NULL && frame1->mapPoints[idx1[i]].lock() == NULL) {
+            frame2->mapPoints[idx2[i]].lock()->add_observation(frame1, frame2->mapPoints[idx2[i]].lock(), idx1[i]);
         }
     }
 
@@ -70,10 +71,10 @@ void Slam::process_frame(const cv::Mat &image) {
             std::vector<int> indices;
             frame1->kdtree.radiusSearch(projectionPoints[i], indices, cv::Mat(), 2, 500);
             for (size_t j = 0; j < indices.size(); j++) {
-                if (frame1->mapPoints[indices[j]] == NULL) {
+                if (frame1->mapPoints[indices[j]].lock() == NULL) {
                     double dist = point_map.mapPoints[i]->orb_distance(frame1->descriptors.row(indices[j]));
                     if (dist < 64.0) {
-                        point_map.mapPoints[i]->add_observation(frame1, indices[j]);
+                        point_map.mapPoints[i]->add_observation(frame1, point_map.mapPoints[i], indices[j]);
                         projection_point_count++;
                         break;
                     }
@@ -84,7 +85,7 @@ void Slam::process_frame(const cv::Mat &image) {
         std::vector<bool> others;
         others.reserve(idx1.size());
         for (int i : idx1) {
-            if (frame1->mapPoints[i] == NULL) {
+            if (frame1->mapPoints[i].lock() == NULL) {
                 others.push_back(true);
             } else {
                 others.push_back(false);
@@ -140,9 +141,10 @@ void Slam::process_frame(const cv::Mat &image) {
             if (x > 0 && x < image.cols && y > 0 && y < image.rows) {
                 color = image.at<cv::Scalar>(y, x);
             }
-            MapPoint p(point_map, points_4d.col(i).rowRange(0, 3), color);
-            p.add_observation(frame2, idx2[i]);
-            p.add_observation(frame1, idx1[i]);
+            std::shared_ptr<MapPoint> p = std::make_shared<MapPoint>(points_4d.col(i).rowRange(0, 3), color);
+            p->id = point_map.add_point(p);
+            p->add_observation(frame2, p, idx2[i]);
+            p->add_observation(frame1, p, idx1[i]);
             np_count++;
 
             //TODO: Optimize

@@ -32,15 +32,15 @@ int main(int argc, char **argv) {
 
         slam.process_frame(frame);
 
-        /* cv::Mat drawn; */
-        /* slam.point_map.frames[slam.point_map.frames.size() - 1]->draw(frame, drawn); */
-        /* cv::imshow("2d", drawn); */
+        cv::Mat drawn;
+        slam.point_map.frames[slam.point_map.frames.size() - 1]->draw(frame, drawn);
+        printf("drawn {rows: %d, cols: %d}\n", drawn.rows, drawn.cols);
+        cv::imshow("2d", drawn);
 
+        if (cv::waitKey(0) == 113) {
+            break;
+        }
         frame_cnt++;
-
-        /* if (cv::waitKey(0) == 113) { */
-        /*     break; */
-        /* } */
     }
 
 }

@@ -1,7 +1,8 @@
 #include "Map.h"
+#include <memory>
 
-int Map::add_point(MapPoint& mapPoint) {
-    this->mapPoints.push_back(&mapPoint);
+int Map::add_point(std::shared_ptr<MapPoint> point) {
+    this->mapPoints.push_back(point);
     return this->maxPoint++;
 }
 

@@ -6,7 +6,8 @@
 #include <algorithm>
 #include <memory>
 #include "Map.h"
-#include "Frame.h"
+
+class Frame;
 
 class MapPoint {
 
@@ -18,12 +19,12 @@ public:
     cv::Scalar color;
     int id;
 
-    MapPoint(Map& pointMap, const cv::Vec3f& point, const cv::Scalar& color, int id = -1);
+    MapPoint(const cv::Vec3f& point, const cv::Scalar& color, int id = -1);
 
     cv::Vec3f homogeneous();
     void remove();
     double orb_distance(const cv::Mat& descriptor);
-    void add_observation(std::shared_ptr<Frame> frame, int index);
+    void add_observation(std::shared_ptr<Frame> frame, std::shared_ptr<MapPoint>, int index);
 
 
 };
