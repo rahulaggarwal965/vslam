@@ -1,0 +1,23 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <p>Accepted file extensions are: <b>jpg, jpeg, png, bmp, tif/tiff</b></p>                                                                                        
+    <p><b>Note</b>: It might take a while to run visual SLAM on your video, so please be patient :)</p>
+
+
+    <form method="post" action="/upload" enctype="multipart/form-data">                                                                                                    
+        <dl>                                                                                                                                                             
+        <p>                                                                                                                                                              
+            <input type="file" accept="video/mp4,video/x-m4v,video/*" name="video" autocomplete="off" required>                                                                                   
+        </p>                                                                                                                                                             
+        </dl>   
+
+        <p>                                                                                                                                                              
+        <input type="submit" value="Upload">                                                                                                                             
+        </p>                                                                                                                                                             
+    </form>
+
+    <script>
+        document.getElementById("upload-btn").style.visibility = "hidden";
+    </script>
+{% endblock %} 
