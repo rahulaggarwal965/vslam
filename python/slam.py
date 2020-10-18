@@ -179,6 +179,7 @@ if __name__ == "__main__":
     F *= downscale
     H = int(H * downscale)
     W = 1024
+  out = cv2.VideoCapture('out.avi', -1, 20.0, (W, H))
   print("using camera %dx%d with F %f" % (W,H,F))
 
   # camera intrinsics
@@ -214,8 +215,9 @@ if __name__ == "__main__":
     else:
       break
 
+    img = slam.mapp.frames[-1].annotate(frame)
+    out.write(img)
     if os.getenv("HEADLESS") is not None:
-      img = slam.mapp.frames[-1].annotate(frame)
       cv2.imshow('img', img)
 
     if cv2.waitKey(16) & 0xFF == ord('q'):
