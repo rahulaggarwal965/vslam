@@ -1,4 +1,5 @@
 .vimspector.json
+__pycache__
 compile_commands.json
 debug/
 release/

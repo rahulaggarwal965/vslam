@@ -1,10 +1,6 @@
 #include "transformation_tools.h"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/types.hpp"
-#include <iostream>
 
-#define MAX_ITERATIONS 30
+#define MAX_ITERATIONS 200
 
 void triangulate(const cv::Mat &pose1, const cv::Mat& pose2, const cv::Point2f &p1, const cv::Point2f &p2, cv::Mat& r3d) {
     cv::Mat E(4, 4, CV_32FC1);
@@ -50,15 +46,6 @@ void fundamentalMatrixToRt(const cv::Mat& fundamental_matrix, const cv::Mat& K, 
     t /= cv::norm(t);
 }
 
-void normalize(const cv::Mat& K_i, const std::vector<cv::Point2f>& points, cv::Mat& normalized) {
-    /* cv::Mat pts_h(points); */
-    cv::Mat pts_h = cv::Mat::ones(3, points.size(), CV_32FC1);
-    for (size_t i = 0; i < points.size(); i++) {
-        pts_h.col(i).at<float>(0) = points[i].x;
-        pts_h.col(i).at<float>(1) = points[i].y;
-    }
-    normalized = K_i * pts_h;
-}
 
 void normalize(const std::vector<cv::KeyPoint>& keypoints, std::vector<cv::Point2f>& normalized_points, cv::Mat& T) {
     float meanX = 0;
@@ -104,24 +91,75 @@ void normalize(const std::vector<cv::KeyPoint>& keypoints, std::vector<cv::Point
     T.at<float>(1,2) = -meanY*sigmaY;
 }
 
-/* void findFundamental(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, std::vector<bool> inliers, cv::Mat& fundamental) { */
+void findFundamental(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, std::vector<bool>& inliers, cv::Mat& fundamental) {
 
-/*     std::vector<cv::Point2f> k_n1, k_n2; */
-/*     cv::Mat T1, T2; */
-/*     normalize(keypoints1, k_n1, T1); */
-/*     normalize(keypoints2, k_n2, T2); */
-/*     cv::Mat T2_t = T2.t(); */
+    const int N = keypoints1.size();
 
-/*     float score = 0; */
-/*     std::vector<cv::Point2f> k_n1i(8), k_n12(8); */
-/*     cv::Mat F; */
+    std::vector<size_t> all_idxs;
+    all_idxs.reserve(N);
+    std::vector<size_t> avail_idxs;
 
-/*     for (int i = 0; i < MAX_ITERATIONS; i++) { */
-/*         for (int j = 0; j < 8; j++) { */
-/*             int index = */
+    for (int i = 0; i < N; i++) {
+        all_idxs.push_back(i);
+    }
+
+    std::vector<std::vector<size_t>> ransac_sets(MAX_ITERATIONS, std::vector<size_t>(8,0));
+
+    for (int i = 0; i < MAX_ITERATIONS; i++) {
+
+        avail_idxs = all_idxs;
+
+        for (int j = 0; j < 8; j++) {
+
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<> distr(0, avail_idxs.size() - 1);
+
+            int rand = distr(gen);
+            int index = avail_idxs[rand];
+
+            ransac_sets[i][j] = index;
+
+            avail_idxs[rand] = avail_idxs.back();
+            avail_idxs.pop_back();
+        }
+    }
+
+    std::vector<cv::Point2f> k_n1, k_n2;
+    cv::Mat T1, T2;
+    normalize(keypoints1, k_n1, T1);
+    normalize(keypoints2, k_n2, T2);
+    cv::Mat T2_t = T2.t();
+
+    int sum_resid = 0, best_nInliers = 0;
+    inliers = std::vector<bool>(N, false);
+    std::vector<bool> current_inliers(N, false);
+    std::vector<cv::Point2f> k_n1i(8), k_n2i(8);
+    cv::Mat F;
+
+    for (int i = 0; i < MAX_ITERATIONS; i++) {
+        for (int j = 0; j < 8; j++) {
+            int index = ransac_sets[i][j];
+
+            k_n1i[j] = k_n1[index];
+            k_n2i[j] = k_n2[index];
+        }
+        cv::Mat F_m = computeFundamental(k_n1i, k_n2i);
+        F = T2_t*F_m*T1;
+
+        //CHECK
+        int curr_nInliers;
+        int curr_sum_resid = fundamentalError(keypoints1, keypoints2, F, current_inliers, curr_nInliers, 0.02);
+        if (curr_nInliers > best_nInliers || (curr_nInliers == best_nInliers && curr_sum_resid < sum_resid)) {
+            fundamental = F.clone();
+            inliers = current_inliers;
+            best_nInliers = curr_nInliers;
+            sum_resid = curr_sum_resid;
+        }
+    }
 
 
-/* } */
+}
 
 cv::Mat computeFundamental(const std::vector<cv::Point2f> &p1, const std::vector<cv::Point2f> &p2) {
     const int N = p1.size();
@@ -153,4 +191,126 @@ cv::Mat computeFundamental(const std::vector<cv::Point2f> &p1, const std::vector
     D.at<float>(2,2) = 0;
 
     return U * cv::Mat::diag(D) * V_t;
+}
+
+float fundamentalError(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const cv::Mat& F, std::vector<bool>& inliers, int& nInliers, float thresh) {
+    const int N = keypoints1.size();
+
+    cv::Mat kp1_h = cv::Mat::ones(3, N, CV_32FC1);
+    cv::Mat kp2_h = cv::Mat::ones(3, N, CV_32FC1);
+    inliers.resize(N);
+    nInliers = 0;
+
+    for (int i = 0; i < N; i++) {
+        kp1_h.at<float>(0, i) = keypoints1[i].pt.x;
+        kp1_h.at<float>(1, i) = keypoints1[i].pt.y;
+        kp2_h.at<float>(0, i) = keypoints2[i].pt.x;
+        kp2_h.at<float>(1, i) = keypoints2[i].pt.y;
+    }
+
+    cv::Mat F_1 = F * kp1_h;
+    cv::Mat F_t2 = F.t() * kp2_h;
+
+    cv::Mat r;
+    cv::reduce(kp2_h.mul(F_1), r, 0, cv::REDUCE_SUM);
+
+    cv::Mat F_sq = F_1.row(0).mul(F_1.row(0)) + F_1.row(1).mul(F_1.row(1)) + \
+            F_t2.row(0).mul(F_t2.row(0)) + F_t2.row(1).mul(F_t2.row(1));
+    cv::sqrt(F_sq, F_sq);
+    cv::Mat t = cv::abs(r) / F_sq;
+
+    for (int i = 0; i < N; i++) {
+        if (t.at<float>(i) < thresh) {
+            inliers[i] = true;
+            nInliers++;
+        } else {
+            inliers[i] = false;
+        }
+    }
+
+    return cv::sum(t)[0];
+
+
+
+
+
+
+
+
+    /* const int N = keypoints1.size(); */
+
+    /* const float f00 = F.at<float>(0,0); */
+    /* const float f01 = F.at<float>(0,1); */
+    /* const float f02 = F.at<float>(0,2); */
+    /* const float f10 = F.at<float>(1,0); */
+    /* const float f11 = F.at<float>(1,1); */
+    /* const float f12 = F.at<float>(1,2); */
+    /* const float f20 = F.at<float>(2,0); */
+    /* const float f21 = F.at<float>(2,1); */
+    /* const float f22 = F.at<float>(2,2); */
+
+    /* inliers.resize(N); */
+
+    /* float score = 0; */
+
+    /* const float th = 3.841; */
+    /* const float thScore = 5.991; */
+
+    /* const float invSigmaSquare = 1.0/(sigma*sigma); */
+
+    /* for(int i=0; i<N; i++) */
+    /* { */
+    /*     bool bIn = true; */
+
+    /*     const cv::Point2f &p1 = keypoints1[i].pt; */
+    /*     const cv::Point2f &p2 = keypoints1[i].pt; */
+
+    /*     const float u1 = p1.x; */
+    /*     const float v1 = p1.y; */
+    /*     const float u2 = p2.x; */
+    /*     const float v2 = p2.y; */
+
+    /*     // Reprojection error in second image */
+    /*     // l2=F21x1=(a2,b2,c2) */
+
+    /*     const float a2 = f00*u1+f01*v1+f02; */
+    /*     const float b2 = f10*u1+f11*v1+f12; */
+    /*     const float c2 = f20*u1+f21*v1+f22; */
+
+    /*     const float num2 = a2*u2+b2*v2+c2; */
+
+    /*     const float squareDist1 = num2*num2/(a2*a2+b2*b2); */
+
+    /*     const float chiSquare1 = squareDist1*invSigmaSquare; */
+
+    /*     if(chiSquare1>th) */
+    /*         bIn = false; */
+    /*     else */
+    /*         score += thScore - chiSquare1; */
+
+    /*     // Reprojection error in second image */
+    /*     // l1 =x2tF21=(a1,b1,c1) */
+
+    /*     const float a1 = f00*u2+f01*v2+f02; */
+    /*     const float b1 = f10*u2+f11*v2+f12; */
+    /*     const float c1 = f20*u2+f21*v2+f22; */
+
+    /*     const float num1 = a1*u1+b1*v1+c1; */
+
+    /*     const float squareDist2 = num1*num1/(a1*a1+b1*b1); */
+
+    /*     const float chiSquare2 = squareDist2*invSigmaSquare; */
+
+    /*     if(chiSquare2>th) */
+    /*         bIn = false; */
+    /*     else */
+    /*         score += thScore - chiSquare2; */
+
+    /*     if(bIn) */
+    /*         inliers[i]=true; */
+    /*     else */
+    /*         inliers[i]=false; */
+    /* } */
+
+    /* return score; */
 }

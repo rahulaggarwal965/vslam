@@ -19,8 +19,8 @@ void Slam::process_frame(const cv::Mat &image) {
     std::vector<int> idx1, idx2;
     cv::Mat pose, Rt_i;
 
-    frame1->normalize_keypoints();
-    frame2->normalize_keypoints();
+    frame1->undistort_points();
+    frame2->undistort_points();
     match_frames(*frame1, *frame2, K, idx1, idx2, pose);
 
     for (size_t i = 0; i < idx2.size(); i++) {
@@ -98,12 +98,12 @@ void Slam::process_frame(const cv::Mat &image) {
     cv::Mat tPoints1(2, idx1.size(), CV_32FC1), tPoints2(2, idx2.size(), CV_32FC1);
     //TODO: use normalized version
     for (size_t i = 0; i < idx1.size(); i++) {
-        auto& point = frame1->normalized_points[idx1[i]];
+        auto& point = frame1->undistorted_points[idx1[i]];
         tPoints1.col(i) = cv::Vec2f(point.x, point.y);
         /* tPoints1.col(i) = frame1->normalized_points.col(idx1[i]); */
     }
     for (size_t i = 0; i < idx2.size(); i++) {
-        auto& point = frame2->normalized_points[idx2[i]];
+        auto& point = frame2->undistorted_points[idx2[i]];
         tPoints2.col(i) = cv::Vec2f(point.x, point.y);
         /* tPoints2.col(i) = frame2->normalized_points.col(idx2[i]); */
     }

@@ -1,6 +1,5 @@
 #include "feature_matching.h"
-#include "opencv2/calib3d.hpp"
-#include "transformation_tools.h"
+#include "opencv2/core/types.hpp"
 
 #define M_DISTANCE_RATIO 0.7
 
@@ -21,15 +20,17 @@ void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, st
 
     std::set<int> sIndexes1, sIndexes2;
     std::vector<int> indexes1, indexes2;
-    std::vector<cv::Point2f> matched_kp1, matched_kp2;
+    std::vector<cv::KeyPoint> matched_kp1, matched_kp2;
     /* std::vector<cv::Vec<cv::KeyPoint, 2>> r; */
 
     for (auto m : initialMatches) {
         if (m[0].distance < m[1].distance * M_DISTANCE_RATIO) {
-            cv::Point2f kp1 = frame1.normalized_points[m[0].queryIdx];
-            cv::Point2f kp2 = frame2.normalized_points[m[0].trainIdx];
+            /* cv::Point2f kp1 = frame1.normalized_points[m[0].queryIdx]; */
+            /* cv::Point2f kp2 = frame2.normalized_points[m[0].trainIdx]; */
             /* cv::Point2f kp2(frame1.normalized_points.at<float>(0, m[0].trainIdx), frame1.normalized_points.at<float>(1, m[0].trainIdx)); */
             //cv::Mat kp2 = frame2.normalized_points.col(m[0].trainIdx);
+            cv::KeyPoint kp1 = frame1.keypoints[m[0].queryIdx];
+            cv::KeyPoint kp2 = frame1.keypoints[m[1].trainIdx];
 
             //TODO: Tune distance threshold
             if (m[0].distance < 32) {
@@ -49,23 +50,31 @@ void match_frames(const Frame& frame1, const Frame& frame2, const cv::Mat& K, st
     assert(sIndexes1.size() == indexes1.size());
     assert(sIndexes2.size() == indexes2.size());
 
-    cv::Mat mask;
+    /* cv::Mat mask; */
+    std::vector<bool> inliers;
     cv::Mat fundamental_matrix;
     //TODO: tune parameters
     //Must be 8 or more matches
     //Fundamental
-    fundamental_matrix = cv::findFundamentalMat(matched_kp1, matched_kp2, cv::FM_RANSAC, 3, 0.99, mask);
+    findFundamental(matched_kp2, matched_kp1, inliers, fundamental_matrix);
+    /* fundamental_matrix = cv::findFundamentalMat(matched_kp1, matched_kp2, cv::FM_RANSAC, 3, 0.99, mask); */
     cv::Mat R, t;
     fundamentalMatrixToRt(fundamental_matrix, K, R, t);
     poseRt(R, t, pose);
 
-    idx1.reserve(idx1.size());
-    idx2.reserve(idx2.size());
-    for (int i = 0; i < mask.rows; i++) {
-        if ((unsigned int)mask.at<uchar>(i)) {
+    idx1.reserve(indexes1.size());
+    idx2.reserve(indexes2.size());
+    for (size_t i = 0; i < inliers.size(); i++) {
+        if (inliers[i]) {
             idx1.push_back(indexes1[i]);
             idx2.push_back(indexes2[i]);
         }
     }
+    /* for (int i = 0; i < mask.rows; i++) { */
+    /*     if ((unsigned int)mask.at<uchar>(i)) { */
+    /*         idx1.push_back(indexes1[i]); */
+    /*         idx2.push_back(indexes2[i]); */
+    /*     } */
+    /* } */
     printf("Matches: %d -> %zu -> %zu\n", frame1.descriptors.rows, initialMatches.size(), idx1.size());
 }

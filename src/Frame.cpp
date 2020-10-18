@@ -28,14 +28,19 @@ void Frame::draw(const cv::Mat& image, cv::Mat& drawn) {
     }
 }
 
-void Frame::normalize_keypoints() {
-    cv::Mat t;
-    normalize(keypoints, normalized_points, t);
-    /* points.reserve(keypoints.size()); */
-    /* for (auto& keypoint : keypoints) { */
-    /*     points.push_back(keypoint.pt); */
-    /* } */
-    /* normalize(K_inv, points, normalized_points); */
+void Frame::undistort_points() {
+    /* cv::Mat pts_h(points); */
+    cv::Mat pts_h = cv::Mat::ones(3, keypoints.size(), CV_32FC1);
+    for (size_t i = 0; i < keypoints.size(); i++) {
+        pts_h.at<float>(0, i) = keypoints[i].pt.x;
+        pts_h.at<float>(1, i) = keypoints[i].pt.y;
+    }
+    cv::Mat u = K_inv * pts_h;
+    undistorted_points.resize(keypoints.size());
+    for (size_t i = 0; i < undistorted_points.size(); i++) {
+        float h = pts_h.at<float>(2, i);
+        undistorted_points[i] = cv::Point2f(pts_h.at<float>(0, i)/h, pts_h.at<float>(1, i)/h);
+    }
 
 }
 

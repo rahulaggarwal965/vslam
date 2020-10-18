@@ -2,9 +2,11 @@
 #define feature_matching_h
 
 #include "opencv2/core/types.hpp"
+#include "opencv2/calib3d.hpp"
 #include <opencv2/features2d.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv4/opencv2/core/mat.hpp>
+#include "transformation_tools.h"
 #include "Frame.h"
 #include <set>
 

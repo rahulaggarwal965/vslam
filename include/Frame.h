@@ -20,7 +20,7 @@ public:
   // Camera Intrinsic
   cv::Mat image, K, K_inv, pose;
   std::vector<cv::KeyPoint> keypoints;
-  std::vector<cv::Point2f> normalized_points;
+  std::vector<cv::Point2f> undistorted_points;
   std::vector<MapPoint*> mapPoints;
   cv::flann::Index kdtree;
   cv::Mat descriptors;
@@ -28,7 +28,7 @@ public:
 
   Frame(const cv::Mat &image, const cv::Mat &K,
         const cv::Mat pose = cv::Mat::eye(4, 4, CV_32FC1));
-  void normalize_keypoints();
+  void undistort_points();
   void draw(const cv::Mat& image, cv::Mat& drawn);
   void generate_kdtree();
 
