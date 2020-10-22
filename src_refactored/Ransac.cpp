@@ -1,8 +1,2 @@
-#include "Ransac.h"
+#include "RansacFilter.h"
 
-class Ransac {
-
-    public:
-        const int N;
-
-}
