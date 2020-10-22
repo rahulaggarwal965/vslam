@@ -1,6 +1,6 @@
 # Compiler
 CC = g++
-CPPFLAGS := -Iinclude -MMD -MP
+CPPFLAGS := -Iinclude_refactored -MMD -MP
 CFLAGS := `pkg-config --cflags opencv4` `pkg-config --cflags eigen3` -I/usr/include/g2o -Wall -std=c++11
 
 # Linker
@@ -8,7 +8,7 @@ LDFLAGS := `pkg-config --libs opencv4` `ls /usr/lib | grep g2o | sed 's/lib/-l/g
 LDLIBS := -lm
 
 # Project Directories
-SRC_DIR := src
+SRC_DIR := src_refactored
 
 # Project Files
 TARGET := vslam
