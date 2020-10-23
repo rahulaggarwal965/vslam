@@ -1,4 +1,5 @@
 #include "RansacFilter.h"
+#include "opencv2/core.hpp"
 
 RansacFilter::RansacFilter(const int min_items, const int max_iterations, const float threshold) :
     min_items(min_items), max_iterations(max_iterations), threshold(threshold) {}
@@ -102,6 +103,26 @@ void RansacFilter::compute_fundamental(std::vector<cv::Point2f> *kp1_set, std::v
 
 }
 
-int RansacFilter::compute_fundamental_residual(cv::Mat *temp_F, std::vector<bool> *inliers) {
+float RansacFilter::compute_fundamental_residual(cv::Mat *F, std::vector<bool> *inliers) {
+    const int N = kp1->size();
+    cv::Mat x1(3, N, CV_32FC1), x2(3, N, CV_32FC1);
+
+    for (int i = 0; i < N; i++) {
+        x1.at<float>(0, i) = (*kp1)[i].pt.x;
+        x1.at<float>(1, i) = (*kp1)[i].pt.y;
+        x1.at<float>(2, i) = 1;
+        x2.at<float>(0, i) = (*kp2)[i].pt.x;
+        x2.at<float>(1, i) = (*kp2)[i].pt.y;
+        x2.at<float>(2, i) = 1;
+    }
+
+    cv::Mat F_x1 = (*F) * x1;       // 3xN
+    cv::Mat F_t_x2 = (*F).t() * x2; // 3xN
+
+    cv::Mat x2_t_F_x1 = x2.mul(F_x1); // 3xN -> 1xN
+    cv::reduce(x2_t_F_x1, x2_t_F_x1, 0, cv::REDUCE_SUM);
+
+    cv::Mat e_sq = x2_t_F_x1.mul(x2_t_F_x1) / F_x1.row(0).mul(F_x1.row(0)) + F_x1.row(1).mul(F_x1.row(1)) + F_t_x2.row(0).mul(F_t_x2.row(0)) + F_t_x2.row(1).mul(F_t_x2.row(1)); // 1xN
+    return (float) cv::sum(e_sq)[0]; // 1
 
 }
