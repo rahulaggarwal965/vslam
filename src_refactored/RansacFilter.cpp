@@ -59,7 +59,7 @@ void RansacFilter::find_fundamental(std::vector<bool> *inliers, cv::Mat *fundame
         auto r = compute_fundamental_residual(&temp_F, &current_inliers); // nInliers, sum of residuals
 
         if (r.first > best_nInliers || (r.first == best_nInliers && r.second > best_score)) {
-            printf("Number of inliers: %d, Sum of squared residuals: %f\n", r.first, r.second);
+            /* printf("Number of inliers: %d, Sum of squared residuals: %f\n", r.first, r.second); */
             best_nInliers = r.first;
             best_score = r.second;
             temp_F.copyTo(*(fundamental));
