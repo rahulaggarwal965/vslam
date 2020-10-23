@@ -3,13 +3,17 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
+#include "RansacFilter.h"
+
+//TODO: refactor
+RansacFilter rf(8, 100, 10);
 
 //TODO: why is orb extraction so much worse?
 void extract_key_points(cv::Mat& image, std::vector<cv::KeyPoint> *keypoints, cv::Mat *descriptors, const int ncols, const int nrows) {
     //TODO: Try Different KP extractors
 
     const int nfeatures = 500;
-    const int cells = ncols * nrows;
+    /* const int cells = ncols * nrows; */
     const int cw = image.cols / ncols, ch = image.rows / nrows;
     cv::Ptr<cv::ORB> orb_feature_detector = cv::ORB::create(nfeatures);
     /* cv::Ptr<cv::ORB> orb_feature_detector = cv::ORB::create(nfeatures / cells, 1.2f, 8, 15, 0, 2, cv::ORB::HARRIS_SCORE, 15, 20); */
@@ -31,7 +35,7 @@ void extract_key_points(cv::Mat& image, std::vector<cv::KeyPoint> *keypoints, cv
         }
     }
     orb_feature_detector->compute(image, *keypoints, *descriptors);
-    printf("# Keypoints found in first image: %zu\n", keypoints->size());
+    /* printf("# Keypoints found in first image: %zu\n", keypoints->size()); */
 }
 
 void extract_key_points(cv::Mat& image, std::vector<cv::KeyPoint> *keypoints, cv::Mat *descriptors) {
@@ -44,20 +48,39 @@ void extract_key_points(cv::Mat& image, std::vector<cv::KeyPoint> *keypoints, cv
         keypoints->emplace_back(p, 20);
     }
     orb_feature_detector->compute(image, *keypoints, *descriptors);
-    printf("# Keypoints found in first image: %zu\n", keypoints->size());
+    /* printf("# Keypoints found in first image: %zu\n", keypoints->size()); */
 }
 
-void match_features(std::vector<cv::KeyPoint> *keypoints1, std::vector<cv::KeyPoint> *keypoints2, cv::Mat *descriptors1, cv::Mat *descriptors2, std::vector<std::pair<int, int>> *matched) {
+void match_features(std::vector<cv::KeyPoint> *keypoints1, std::vector<cv::KeyPoint> *keypoints2, cv::Mat *descriptors1, cv::Mat *descriptors2, std::vector<std::pair<int, int>> *matches) {
     cv::Ptr<cv::BFMatcher> bfmatcher = cv::BFMatcher::create(cv::NORM_HAMMING);
     std::vector<std::vector<cv::DMatch>> initialMatches;
     bfmatcher->knnMatch(*descriptors1, *descriptors2, initialMatches, 2);
 
+    std::vector<std::pair<int, int>> i_matches;
+
     for (std::vector<cv::DMatch> m : initialMatches) {
         //lowes
         if (m[0].distance < m[1].distance * 0.7) {
-            matched->push_back(std::make_pair(m[0].queryIdx, m[0].trainIdx));
+            i_matches.push_back(std::make_pair(m[0].queryIdx, m[0].trainIdx));
+            /* p1.emplace_back((*keypoints1)[m[0].queryIdx].pt.x, (*keypoints1)[m[0].queryIdx].pt.y); */
+            /* p2.emplace_back((*keypoints2)[m[0].trainIdx].pt.x, (*keypoints2)[m[0].trainIdx].pt.y); */
         }
     }
+
+
+    rf.initialize(keypoints1, keypoints2, &i_matches);
+    std::vector<bool> inliers;
+    cv::Mat fundamental;
+    rf.find_fundamental(&inliers, &fundamental);
+    for (size_t i = 0; i < inliers.size(); i++) {
+        if (inliers[i]) {
+            matches->emplace_back(i_matches[i]);
+        }
+    }
+    /* matches->swap(i_matches); */
+    printf("%zu keypoints -> %zu preliminary matches -> %zu final matches\n", keypoints1->size(), i_matches.size(), matches->size());
+
+
 }
 
 int main(int argc, char **argv) {
@@ -75,6 +98,8 @@ int main(int argc, char **argv) {
     std::vector<cv::KeyPoint> lastKeypoints;
     cv::Mat lastDescriptors;
 
+    size_t frame_cnt = 0;
+
     while (cap.isOpened()) {
         cap >> frame;
         cv::Mat gray;
@@ -82,25 +107,28 @@ int main(int argc, char **argv) {
 
         std::vector<cv::KeyPoint> keypoints;
         cv::Mat descriptors;
-        /* extract_key_points(gray, &keypoints, &descriptors); */
-        extract_key_points(frame, &keypoints, &descriptors, 5, 5);
+        extract_key_points(gray, &keypoints, &descriptors);
+        /* extract_key_points(frame, &keypoints, &descriptors, 5, 5); */
 
-        std::vector<std::pair<int, int>> matches;
-        //match
-        match_features(&lastKeypoints, &keypoints, &lastDescriptors, &descriptors, &matches);
+        if (frame_cnt > 0) {
+            std::vector<std::pair<int, int>> matches;
+            //match
+            match_features(&lastKeypoints, &keypoints, &lastDescriptors, &descriptors, &matches);
 
-        cv::Mat annotated = frame.clone();
-        for (auto m : matches) {
-            cv::line(annotated, lastKeypoints[m.first].pt, keypoints[m.second].pt, cv::Scalar(0,0, 255));
-            /* cv::circle(annotated, p.pt, 2, cv::Scalar(0, 255, 0)); */
-        }
+            cv::Mat annotated = frame.clone();
+            for (auto m : matches) {
+                cv::line(annotated, lastKeypoints[m.first].pt, keypoints[m.second].pt, cv::Scalar(0,0, 255));
+                /* cv::circle(annotated, p.pt, 2, cv::Scalar(0, 255, 0)); */
+            }
 
-        cv::imshow("points", annotated);
-        if (cv::waitKey(16) == 113) {
-            break;
+            cv::imshow("points", annotated);
+            if (cv::waitKey(16) == 113) {
+                break;
+            }
         }
 
         lastKeypoints.swap(keypoints);
         lastDescriptors = descriptors;
+        frame_cnt++;
     }
 }
