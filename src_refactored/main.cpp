@@ -1,16 +1,16 @@
-#include "opencv2/core.hpp"
-#include "opencv2/core/types.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/videoio.hpp"
+#include <opencv2/core.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
 #include <iostream>
 #include "RansacFilter.h"
 
 //TODO: refactor
 RansacFilter rf(8, 100, 10);
 //TODO: calibrate camera
-cv::Mat K(3, 3, CV_32FC1, (float[9]) {1, 0, 960, 0, 1, 540, 0, 0, 1});
+cv::Mat K(3, 3, CV_32FC1, (float[9]) {200, 0, 960, 0, 200, 540, 0, 0, 1});
 cv::Mat K_inv;
 
 
@@ -20,11 +20,10 @@ void extract_pose(cv::Mat *F, cv::Mat *pose) {
     cv::Mat U, D, V_t;
     cv::SVD::compute(E, D, U, V_t);
 
-    printf("[0, 0]: %f, [1, 1]: %f\n", D.at<float>(0, 0), D.at<float>(1, 1));
-
     cv::Mat t;
     U.col(2).copyTo(t);
-    //t /= cv::norm(t);
+    //TODO: investigate if norm is good or bad , t might be negative as well
+    t /= cv::norm(t);
 
     cv::Mat W = cv::Mat::zeros(3, 3, CV_32FC1);
     W.at<float>(0, 1) = -1;
@@ -42,13 +41,20 @@ void extract_pose(cv::Mat *F, cv::Mat *pose) {
     }
 
     //TODO: better way of checking which rotation matrix is better
-    /* std::cout << "t" << '\n' << t << '\n' << '\n'; */
-    /* std::cout << "R1" << '\n' << R_1 << '\n' << '\n'; */
-    /* std::cout << "R2" << '\n' << R_2 << '\n' << '\n'; */
+    cv::Mat R = (R_1.at<float>(0, 0) + R_1.at<float>(1, 1) + R_1.at<float>(2, 2) < 0) ? R_2 : R_1;
+    //TODO: what?
+    if (t.at<float>(2) < 0) {
+        t *= -1;
+    }
+
+    //for now
+    (*pose) = cv::Mat::eye(4, 4, CV_32FC1);
+    R.copyTo((*pose).rowRange(0, 3).colRange(0, 3));
+    t.copyTo((*pose).rowRange(0, 3).col(3));
+
+
 
 }
-
-void normalize(std::vector<cv::KeyPoint> *points);
 
 //TODO: why is orb extraction so much worse?
 void extract_key_points(cv::Mat& image, std::vector<cv::KeyPoint> *keypoints, cv::Mat *descriptors, const int ncols, const int nrows) {
@@ -138,8 +144,10 @@ int main(int argc, char **argv) {
     std::vector<cv::KeyPoint> lastKeypoints;
     cv::Mat lastDescriptors;
 
+    cv::Mat Rt = cv::Mat::eye(4, 4, CV_32FC1);
     size_t frame_cnt = 0;
 
+    std::vector<cv::Mat *> Rts;
     while (cap.isOpened()) {
         cap >> frame;
         cv::Mat gray;
@@ -157,8 +165,10 @@ int main(int argc, char **argv) {
             match_features(&lastKeypoints, &keypoints, &lastDescriptors, &descriptors, &matches, &fundamental); // we match from last frame to next frame (this = x2)
             cv::Mat pose;
             extract_pose(&fundamental, &pose);
+            Rt = pose * Rt;
+            Rts.emplace_back(&Rt);
 
-            /* std::cout << "Fundamental Matrix" << '\n' << fundamental << '\n' << '\n'; */
+            std::cout << "Rt" << '\n' << *Rts.back() << '\n' << '\n';
 
             cv::Mat annotated = frame.clone();
             for (auto p : keypoints) {

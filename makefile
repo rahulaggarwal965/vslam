@@ -1,10 +1,10 @@
 # Compiler
 CC = g++
 CPPFLAGS := -Iinclude_refactored -MMD -MP
-CFLAGS := `pkg-config --cflags opencv4` `pkg-config --cflags eigen3` -I/usr/include/g2o -Wall -std=c++11
+CFLAGS := $(shell pkg-config --cflags opencv4 eigen3 g2o pangolin) -Wall -std=c++11
 
 # Linker
-LDFLAGS := `pkg-config --libs opencv4` `ls /usr/lib | grep g2o | sed 's/lib/-l/g' | sed 's/\.so//g'`
+LDFLAGS := $(shell pkg-config --libs opencv4 g2o glew pangolin)
 LDLIBS := -lm
 
 # Project Directories
