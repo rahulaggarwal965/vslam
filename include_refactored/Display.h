@@ -9,11 +9,13 @@ class Display {
 
         void initialize();
         void run();
+        void join();
 
         void draw_points(std::vector<cv::Point3f> points);
         void draw_boxes(std::vector<cv::Mat*> boxes);
 
     private:
+        std::thread loop;
         const char *window_name;
         const int W, H;
 };

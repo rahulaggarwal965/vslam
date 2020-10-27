@@ -5,7 +5,7 @@ CFLAGS := $(shell pkg-config --cflags opencv4 eigen3 g2o pangolin) -Wall -std=c+
 
 # Linker
 LDFLAGS := $(shell pkg-config --libs opencv4 g2o glew pangolin)
-LDLIBS := -lm
+LDLIBS := -pthread -lm
 
 # Project Directories
 SRC_DIR := src_refactored

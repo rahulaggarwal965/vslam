@@ -12,9 +12,7 @@ void Display::initialize() {
     glEnable(GL_DEPTH_TEST);
     pangolin::GetBoundWindow()->RemoveCurrent();
 
-    std::thread loop;
-    loop = std::thread(&Display::run);
-    loop.join();
+    this->loop = std::thread(&Display::run, this);
 }
 
 void Display::run() {
@@ -42,6 +40,10 @@ void Display::run() {
     }
 
     pangolin::GetBoundWindow()->RemoveCurrent();
+}
+
+void Display::join() {
+    loop.join();
 }
 
 void draw_points(std::vector<cv::Point3f> points) {

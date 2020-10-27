@@ -6,6 +6,7 @@
 #include <opencv2/videoio.hpp>
 #include <iostream>
 #include "RansacFilter.h"
+#include "Display.h"
 
 //TODO: refactor
 RansacFilter rf(8, 100, 10);
@@ -144,6 +145,9 @@ int main(int argc, char **argv) {
     std::vector<cv::KeyPoint> lastKeypoints;
     cv::Mat lastDescriptors;
 
+    Display display("Pose viewer", 1280, 720);
+    display.initialize();
+
     cv::Mat Rt = cv::Mat::eye(4, 4, CV_32FC1);
     size_t frame_cnt = 0;
 
@@ -189,4 +193,7 @@ int main(int argc, char **argv) {
         lastDescriptors = descriptors;
         frame_cnt++;
     }
+    display.join();
+
+    return 0;
 }
