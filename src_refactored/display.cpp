@@ -1,4 +1,5 @@
 #include "Display.h"
+#include "display/display.h"
 
 Display::Display(const char *window_name, int W, int H)
     : window_name(window_name),
@@ -40,6 +41,10 @@ void Display::run() {
     }
 
     pangolin::GetBoundWindow()->RemoveCurrent();
+}
+
+void Display::close() {
+    pangolin::Quit();
 }
 
 void Display::join() {

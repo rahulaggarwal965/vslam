@@ -9,6 +9,7 @@ class Display {
 
         void initialize();
         void run();
+        void close();
         void join();
 
         void draw_points(std::vector<cv::Point3f> points);

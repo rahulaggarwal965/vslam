@@ -2,5 +2,6 @@
 compile_commands.json
 debug/
 release/
-.clangd/
+.cache/
 test_videos/
+reprojected_points.json
