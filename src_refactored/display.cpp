@@ -1,8 +1,9 @@
 #include "Display.h"
-#include "display/display.h"
+#include <mutex>
 
-Display::Display(const char *window_name, int W, int H)
-    : window_name(window_name),
+Display::Display(const char *window_name, int W, int H, std::mutex *mtx)
+    : mtx(mtx),
+    window_name(window_name),
     W(W),
     H(H)
 {}
@@ -35,7 +36,23 @@ void Display::run() {
         d_cam.Activate(s_cam);
 
         //TODO: implement queue
-        pangolin::glDrawColouredCube();
+        mtx->lock();
+        /* while (!q.empty()) { */
+        /*     ds = q.front(); */
+        /*     q.pop(); */
+        /* } */
+        if (ds.points != NULL) {
+            printf("Points size: %zu\n", ds.points->size());
+            glColor3f(1.0, 0.0, 0.0);
+            draw_points(*ds.points);
+        }
+        if (ds.frames != NULL) {
+            glColor3f(0.0, 0.0, 1.0);
+            for (auto &f : *ds.frames) {
+                draw_box(f.pose);
+            }
+        }
+        mtx->unlock();
 
         pangolin::FinishFrame();
     }
@@ -51,7 +68,7 @@ void Display::join() {
     loop.join();
 }
 
-void draw_points(std::vector<cv::Point3f> points) {
+void Display::draw_points(const std::vector<cv::Point3f> &points) {
     glBegin(GL_POINTS);
     for (size_t i = 0; i < points.size(); i++) {
         glVertex3d(points[i].x, points[i].y, points[i].z);
@@ -59,7 +76,43 @@ void draw_points(std::vector<cv::Point3f> points) {
     glEnd();
 }
 
-void draw_boxes(std::vector<cv::Mat*> boxes, float w=1.0, float h_ratio=0.75, float z_ratio=0.6) {
+void Display::draw_box(const cv::Mat &pose, float w, float h_ratio, float z_ratio) {
+    float h = w * h_ratio;
+    float z = w * z_ratio;
+
+    glPushMatrix();
+    if (!pose.isContinuous()) {
+        return;
+    }
+    glMultTransposeMatrixf(pose.ptr<float>(0));
+
+    glBegin(GL_LINES);
+    glVertex3f(0,0,0);
+    glVertex3f(w,h,z);
+    glVertex3f(0,0,0);
+    glVertex3f(w,-h,z);
+    glVertex3f(0,0,0);
+    glVertex3f(-w,-h,z);
+    glVertex3f(0,0,0);
+    glVertex3f(-w,h,z);
+
+    glVertex3f(w,h,z);
+    glVertex3f(w,-h,z);
+
+    glVertex3f(-w,h,z);
+    glVertex3f(-w,-h,z);
+
+    glVertex3f(-w,h,z);
+    glVertex3f(w,h,z);
+
+    glVertex3f(-w,-h,z);
+    glVertex3f(w,-h,z);
+    glEnd();
+
+    glPopMatrix();
+}
+
+void Display::draw_boxes(std::vector<cv::Mat*> boxes, float w, float h_ratio, float z_ratio) {
     float h = w * h_ratio;
     float z = w * z_ratio;
 

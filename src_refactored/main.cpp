@@ -2,7 +2,7 @@
 #include <opencv2/highgui.hpp>
 #include <iostream>
 #include "RansacFilter.h"
-/* #include "Display.h" */
+#include "Display.h"
 #include "helpers.h"
 #include "Frame.h"
 
@@ -32,24 +32,30 @@ int main(int argc, char **argv) {
     cv::invert(K, K_inv);
     print_matrix(K_inv, "K_inv");
 
+    std::mutex mtx;
+
     std::vector<Frame> frames;
+    Display display("Map", W, H, &mtx);
+    display.initialize();
 
     cv::Mat image;
 
     size_t frame_cnt = 0;
+    const float thresholdSq = 4.0;
+    std::vector<cv::Point3f> points;
 
     while (cap.isOpened()) {
         cap >> image;
 
         frames.emplace_back();
-        Frame &f = frames.back();
-        initialize_frame(f, image);
+        Frame &frame = frames.back();
+        initialize_frame(frame, image);
         /* extract_features(f, 5, 5); */
-        extract_features(f);
+        extract_features(frame);
 
         if (frame_cnt == 0) {
-            f.pose = cv::Mat::eye(4, 4, CV_32F);
-            f.R_t = cv::Mat::eye(4, 4, CV_32F);
+            frame.pose = cv::Mat::eye(4, 4, CV_32F);
+            frame.R_t = cv::Mat::eye(4, 4, CV_32F);
         } else {
 
             const Frame &last_frame = frames[frames.size() - 2];
@@ -57,20 +63,20 @@ int main(int argc, char **argv) {
             //match
             cv::Mat fundamental;
             // we match from last frame to next frame (this = x2)
-            match_features(last_frame, f, rf, matches, fundamental);
+            match_features(last_frame, frame, rf, matches, fundamental);
             // match_features(last_keypoints, keypoints, lastDescriptors, descriptors, rf, matches, fundamental);
 
 
             // Relative rotation (from last frame to this)
             cv::Mat rotation, translation;
             extract_Rt(fundamental, K, rotation, translation);
-            f.R_t = cv::Mat::eye(4, 4, CV_32F);
-            rotation.copyTo(f.R_t.rowRange(0, 3).colRange(0, 3));
-            translation.copyTo(f.R_t.rowRange(0, 3).col(3));
-            f.pose = last_frame.pose * f.R_t;
+            frame.R_t = cv::Mat::eye(4, 4, CV_32F);
+            rotation.copyTo(frame.R_t.rowRange(0, 3).colRange(0, 3));
+            translation.copyTo(frame.R_t.rowRange(0, 3).col(3));
+            frame.pose = last_frame.pose * frame.R_t;
 
             cv::Mat annotated;
-            draw(f, annotated);
+            draw(frame, annotated);
 
             cv::Mat initial_points1(2, matches.size(), CV_32FC1);
             cv::Mat initial_points2(2, matches.size(), CV_32FC1);
@@ -78,23 +84,17 @@ int main(int argc, char **argv) {
                 const std::pair<int, int>& m = matches[i];
                 initial_points1.at<float>(0, i) = last_frame.keypoints[m.first].pt.x;
                 initial_points1.at<float>(1, i) = last_frame.keypoints[m.first].pt.y;
-                initial_points2.at<float>(0, i) = f.keypoints[m.second].pt.x;
-                initial_points2.at<float>(1, i) = f.keypoints[m.second].pt.y;
-                /* temp_matches[0].push_back(last_keypoints[m.first].pt); */
-                /* temp_matches[1].push_back(keypoints[m.second].pt); */
-                cv::line(annotated, last_frame.keypoints[m.first].pt, f.keypoints[m.second].pt, cv::Scalar(0,0, 255));
-                /* cv::circle(annotated, p.pt, 2, cv::Scalar(0, 255, 0)); */
+                initial_points2.at<float>(0, i) = frame.keypoints[m.second].pt.x;
+                initial_points2.at<float>(1, i) = frame.keypoints[m.second].pt.y;
+
+                cv::line(annotated, last_frame.keypoints[m.first].pt, frame.keypoints[m.second].pt, cv::Scalar(0,0, 255));
             }
 
             //TODO: triangulation
 
-            // Relative camera matrices
-            /* cv::Mat c1 = K * Rts[Rts.size() - 2]->rowRange(0, 3); */
-            /* cv::Mat c2 = K * Rts.back()->rowRange(0, 3); */
-
             cv::Mat c1 = cv::Mat::zeros(3, 4, CV_32FC1);
             K.copyTo(c1.colRange(0, 3));
-            cv::Mat c2 = K * f.R_t.rowRange(0, 3);
+            cv::Mat c2 = K * frame.R_t.rowRange(0, 3);
 
             cv::Mat points_4d;
             triangulate(initial_points1, initial_points2, c1, c2, points_4d);
@@ -120,11 +120,28 @@ int main(int argc, char **argv) {
 
 
             float reproj_error = 0;
+            std::vector<int> reprojection_inliers;
             for (int i = 0; i < d1.cols; i++) {
-               reproj_error += d1.col(i).dot(d1.col(i)) + d2.col(i).dot(d2.col(i));
+                float re1 = d1.col(i).dot(d1.col(i));
+                if (re1 > thresholdSq) continue;
+                float re2 = d2.col(i).dot(d2.col(i));
+                if (re2 > thresholdSq) continue;
+                else {
+                    reprojection_inliers.push_back(i);
+                    reproj_error += re1 + re2;
+                }
             }
 
-            printf("Reprojection Error: %f\n", reproj_error);
+            mtx.lock();
+            for (int i : reprojection_inliers) {
+                points.emplace_back(points_4d.at<float>(0, i), points_4d.at<float>(1, i), points_4d.at<float>(2, i));
+            }
+            display.ds.points = &points;
+            display.ds.frames = &frames;
+            mtx.unlock();
+
+            /* printf("Reprojection inliers: %zu\n", reprojection_inliers.size()); */
+            /* printf("Reprojection Error: %f\n", reproj_error); */
 
 
             /* char str[50]; */
@@ -132,14 +149,14 @@ int main(int argc, char **argv) {
             /* write_matrix(d1, str, fs); */
 
             cv::imshow("points", annotated);
-            if (cv::waitKey(25) == 113) {
-                /* display.close(); */
+            if (cv::waitKey(1) == 113) {
+                display.close();
                 break;
             }
         }
 
         frame_cnt++;
     }
-    /* display.join(); */
+    display.join();
     return 0;
 }
