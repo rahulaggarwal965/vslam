@@ -3,5 +3,8 @@ compile_commands.json
 debug/
 release/
 .cache/
+.clang-format
 test_videos/
 reprojected_points.json
+tags
+tests/bin/

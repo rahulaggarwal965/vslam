@@ -1,14 +1,17 @@
 #ifndef __DISPLAY_H__
 #define __DISPLAY_H__
 
-#include "Frame.h"
 #include <opencv2/core.hpp>
 #include <pangolin.h>
 #include <thread>
 #include <queue>
 
+#include "vslam_internal.h"
+#include "Frame.h"
+
 struct DisplayState {
-    std::vector<cv::Point3f> *points = NULL;
+    cv::Mat *points = NULL;
+    memory_index size = 0;
     std::vector<Frame> *frames = NULL;
 };
 
@@ -25,6 +28,7 @@ class Display {
         void join();
 
         void draw_points(const std::vector<cv::Point3f> &points);
+        void draw_points(const cv::Mat &points, const memory_index size);
         void draw_box(const cv::Mat &pose, float w = 1.0, float h_ratio = 0.75, float z_ratio = 0.6);
         void draw_boxes(std::vector<cv::Mat*> boxes, float w=1.0, float h_ratio=0.75, float z_ratio=0.6);
 

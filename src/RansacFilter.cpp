@@ -33,13 +33,13 @@ void RansacFilter::initialize_sets(const int n_matches) {
     }
 }
 
-void RansacFilter::find_fundamental(const std::vector<cv::KeyPoint> &kp1, const std::vector<cv::KeyPoint> &kp2, const std::vector<std::pair<int, int>> &matches, std::vector<bool> &inliers, cv::Mat &fundamental) {
+void RansacFilter::find_fundamental(const std::vector<cv::Point2f> &p1, const std::vector<cv::Point2f> &p2, const std::vector<std::pair<int, int>> &matches, std::vector<bool> &inliers, cv::Mat &fundamental) {
 
     initialize_sets(matches.size());
 
     //TODO: normalize
 
-    std::vector<cv::Point2f> kp1_set(8), kp2_set(8);
+    std::vector<cv::Point2f> p1_set(8), p2_set(8);
     cv::Mat temp_F;
     float best_score = 0;
     int best_nInliers = 0;
@@ -49,12 +49,12 @@ void RansacFilter::find_fundamental(const std::vector<cv::KeyPoint> &kp1, const 
     for (int i = 0; i < max_iterations; i++) {
         for (size_t j = 0; j < ransac_sets[i].size(); j++) {
             int idx = ransac_sets[i][j];
-            kp1_set[j] = kp1[matches[idx].first].pt;
-            kp2_set[j] = kp2[matches[idx].second].pt;
+            p1_set[j] = p1[matches[idx].first];
+            p2_set[j] = p2[matches[idx].second];
         }
 
-        compute_fundamental(kp1_set, kp2_set, temp_F);
-        auto r = compute_fundamental_residual(kp1, kp2, matches, temp_F, current_inliers); // nInliers, sum of residuals
+        compute_fundamental(p1_set, p2_set, temp_F);
+        auto r = compute_fundamental_residual(p1, p2, matches, temp_F, current_inliers); // nInliers, sum of residuals
 
         if (r.first > best_nInliers || (r.first == best_nInliers && r.second > best_score)) {
             /* printf("Number of inliers: %d, Sum of squared residuals: %f\n", r.first, r.second); */
@@ -66,16 +66,16 @@ void RansacFilter::find_fundamental(const std::vector<cv::KeyPoint> &kp1, const 
     }
 }
 
-void RansacFilter::compute_fundamental(const std::vector<cv::Point2f> &kp1_set, const std::vector<cv::Point2f> &kp2_set, cv::Mat &temp_F) {
-    const int N = kp1_set.size();
+void RansacFilter::compute_fundamental(const std::vector<cv::Point2f> &p1_set, const std::vector<cv::Point2f> &p2_set, cv::Mat &temp_F) {
+    const int N = p1_set.size();
 
     cv::Mat A(N, 9, CV_32FC1);
 
     for (int i = 0; i < N; i++) {
-        const float u1 = kp1_set[i].x;
-        const float v1 = kp1_set[i].y;
-        const float u2 = kp2_set[i].x;
-        const float v2 = kp2_set[i].y;
+        const float u1 = p1_set[i].x;
+        const float v1 = p1_set[i].y;
+        const float u2 = p2_set[i].x;
+        const float v2 = p2_set[i].y;
 
         // dst' * F * src = 0
         A.at<float>(i,0) = u2*u1;
@@ -102,17 +102,17 @@ void RansacFilter::compute_fundamental(const std::vector<cv::Point2f> &kp1_set, 
 
 }
 
-std::pair<int, float> RansacFilter::compute_fundamental_residual(const std::vector<cv::KeyPoint> &kp1, const std::vector<cv::KeyPoint> &kp2, const std::vector<std::pair<int, int>> &matches, const cv::Mat &F, std::vector<bool> &inliers) {
+std::pair<int, float> RansacFilter::compute_fundamental_residual(const std::vector<cv::Point2f> &p1, const std::vector<cv::Point2f> &p2, const std::vector<std::pair<int, int>> &matches, const cv::Mat &F, std::vector<bool> &inliers) {
     const int N = matches.size();
     inliers.resize(N);
     cv::Mat x1(3, N, CV_32FC1), x2(3, N, CV_32FC1);
 
     for (int i = 0; i < N; i++) {
-        x1.at<float>(0, i) = kp1[matches[i].first].pt.x;
-        x1.at<float>(1, i) = kp1[matches[i].first].pt.y;
+        x1.at<float>(0, i) = p1[matches[i].first].x;
+        x1.at<float>(1, i) = p1[matches[i].first].y;
         x1.at<float>(2, i) = 1;
-        x2.at<float>(0, i) = kp2[matches[i].second].pt.x;
-        x2.at<float>(1, i) = kp2[matches[i].second].pt.y;
+        x2.at<float>(0, i) = p2[matches[i].second].x;
+        x2.at<float>(1, i) = p2[matches[i].second].y;
         x2.at<float>(2, i) = 1;
     }
 

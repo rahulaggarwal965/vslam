@@ -1,41 +1,35 @@
-#ifndef frame_h
-#define frame_h
+#ifndef __FRAME_H__
+#define __FRAME_H__
 
-#include "Map.h"
-#include "transformation_tools.h"
-#include "opencv2/core.hpp"
-#include "opencv2/core/mat.hpp"
+#include <opencv2/core.hpp>
 #include "opencv2/imgproc.hpp"
-#include "opencv2/flann/miniflann.hpp"
-#include <opencv2/ml.hpp>
+#include <opencv2/features2d.hpp>
+#include "helpers.h"
+#include "RansacFilter.h"
+#include "KDTree.h"
 
-//TODO: this is really fucking ugly
-void extract_key_points(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
+struct Frame {
+    cv::Mat image;
+#if 0
+    float pose[16], R_t[16];
+#else
+    cv::Mat pose, R_t; // really should be 16 + 16 = 32 floats * 4 = 128 bytes
+#endif
 
-class MapPoint;
+    /* std::vector<cv::KeyPoint> keypoints; */
+    std::vector<cv::Point2f> points;
+    cv::Mat descriptors;
 
-class Frame {
+    KDTree kdtree;
 
-public:
-  // Camera Intrinsic
-  cv::Mat image, K, K_inv, pose;
-  std::vector<cv::KeyPoint> keypoints;
-  std::vector<cv::Point2f> normalized_points;
-  std::vector<MapPoint*> mapPoints;
-  cv::flann::Index kdtree;
-  cv::Mat descriptors;
-  int id;
-
-  Frame(const cv::Mat &image, const cv::Mat &K,
-        const cv::Mat pose = cv::Mat::eye(4, 4, CV_32FC1));
-  void normalize_keypoints();
-  void draw(const cv::Mat& image, cv::Mat& drawn);
-  void generate_kdtree();
-
-  /* cv::ml::KD */
-  /* cv::Ptr<cv::ml::KNearest> kd() { */
-
-  /* } */
+    long id;
 };
+
+void initialize_frame(Frame &frame, const cv::Mat &image, long frame_id);
+void draw(const Frame &frame, cv::Mat &annotated);
+void generate_kdtree(const Frame &frame);
+void extract_features(Frame &frame, int nrows, int ncols);
+void extract_features(Frame &frame);
+void match_features(const Frame &frame1, const Frame &frame2, RansacFilter &rf, std::vector<std::pair<int, int>> &matches, cv::Mat &F);
 
 #endif

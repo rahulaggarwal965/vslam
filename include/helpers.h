@@ -4,6 +4,8 @@
 #include <opencv2/core.hpp>
 #include <iostream>
 
+#include "vslam_internal.h"
+
 inline void print_matrix(const cv::Mat &mat, const char *name) {
     std::cout << name << '\n' << mat << '\n' << '\n';
 }

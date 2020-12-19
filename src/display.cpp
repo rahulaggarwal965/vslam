@@ -42,9 +42,9 @@ void Display::run() {
         /*     q.pop(); */
         /* } */
         if (ds.points != NULL) {
-            printf("Points size: %zu\n", ds.points->size());
+            printf("Points size: %zu\n", ds.size);
             glColor3f(1.0, 0.0, 0.0);
-            draw_points(*ds.points);
+            draw_points(*ds.points, ds.size);
         }
         if (ds.frames != NULL) {
             glColor3f(0.0, 0.0, 1.0);
@@ -72,6 +72,22 @@ void Display::draw_points(const std::vector<cv::Point3f> &points) {
     glBegin(GL_POINTS);
     for (size_t i = 0; i < points.size(); i++) {
         glVertex3d(points[i].x, points[i].y, points[i].z);
+    }
+    glEnd();
+}
+
+void Display::draw_points(const cv::Mat &points, const memory_index size) {
+    glBegin(GL_POINTS);
+    if (!points.isContinuous()) {
+        fprintf(stderr, "Error: not continuous in %s, line %d\n", __FILE__, __LINE__);
+        return;
+    }
+    // NOTE(rahul): expect points to be Nx4 and continuous ...
+    /* float *data = (float *) points.data; */
+    const float *data = points.ptr<float>(0);
+    for (memory_index i = 0; i < size; i += 4) {
+        glVertex3d(data[i], data[i + 1], data[i + 2]);
+        /* glVertex3d(points[i].x, points[i].y, points[i].z); */
     }
     glEnd();
 }
