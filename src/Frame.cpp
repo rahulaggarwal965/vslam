@@ -70,6 +70,7 @@ void extract_features(Frame &frame) {
     for (const auto &kp : keypoints) {
        frame.points.push_back(kp.pt);
     }
+    frame.map_point_ids.resize(points.size(), -1);
 
     // TODO(rahul): generate kd trees here
     construct_kdtree(frame.kdtree, frame.points);

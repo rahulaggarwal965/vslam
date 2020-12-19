@@ -35,6 +35,9 @@ int main(int argc, char **argv) {
     cv::invert(K, K_inv);
     print_matrix(K_inv, "K_inv");
 
+
+    const u32 DISTANCE_THRESHOLD = 64;
+
     std::mutex mtx;
 
     PointMap pm;
@@ -90,9 +93,6 @@ int main(int argc, char **argv) {
             // TODO(rahul): make these interleaved
             cv::Mat initial_points1(matches.size(), 2, CV_32FC1);
             cv::Mat initial_points2(matches.size(), 2, CV_32FC1);
-            if (!initial_points1.isContinuous() || !initial_points2.isContinuous()) {
-                fprintf(stderr, "Error: not continuous in %s, line %d\n", __FILE__, __LINE__);
-            }
             f32 *initial_points_data1 = initial_points1.ptr<float>();
             f32 *initial_points_data2 = initial_points2.ptr<float>();
             for (memory_index i = 0, j = 0; i < matches.size(); i++, j += 2) {
@@ -115,9 +115,39 @@ int main(int argc, char **argv) {
 
             /* //TODO: search by projection (assuming pm.points = Nx4) */
             /* cv::Mat projected_map_points = c2 * pm.points.rowRange(0, pm.size).t(); */
+            if (pm.size > 0) {
+                cv::Mat projected_map_points = pm.points.rowRange(0, pm.size) * c2.t();
 
-            /* std::vector<bool> current_frame_inliers(pm.size, false); */
-            /* // make non homogeneous */
+                std::vector<bool> current_frame_inliers(pm.size, false);
+                // make non homogeneous
+                float *projected_map_points_data = projected_map_points.ptr<f32>();
+                for (memory_index i = 0, j = 0; i < projected_map_points.rows; i++, j += 3) {
+                    const f32 h = projected_map_points_data[j + 2];
+                    f32 &x = projected_map_points_data[j + 0];
+                    f32 &y = projected_map_points_data[j + 1];
+                    x /= h;
+                    y /= h;
+                    if (x >= 0 && x < W && y >= 0 && y < H) {
+                        current_frame_inliers[i] = true;
+                    }
+                }
+
+                for (memory_index i = 0, j = 0; i < pm.size; i++, j += 3) {
+                    if (!current_frame_inliers[i]) continue;
+                    const cv::Point2f &query_pt = {projected_map_points_data[j], projected_map_points_data[j + 1]};
+                    std::vector<memory_index> indices = radius_search(frame.kdtree, frame.points, query_pt, 2);
+                    for (memory_index idx : indices) {
+                        if (frame.map_point_ids[idx] >= 0) continue;
+                        u32 dist = orb_distance(pm, i, frame, idx);
+                        if (dist < DISTANCE_THRESHOLD) {
+                            frame.map_point_ids[idx] = i;
+                            pm.frame_ids[i].push_back(frame.id);
+                            pm.frame_point_ids[i].push_back(idx);
+                            break;
+                        }
+                    }
+                }
+            }
             /* for (int i = 0; i < projected_map_points.cols; i++) { */
             /*     const float h = projected_map_points.at<float>(2, i); */
             /*     const float x = (projected_map_points.at<float>(0, i) /= h); */
@@ -191,7 +221,7 @@ int main(int argc, char **argv) {
             cv::Mat d2 = reproj_points2 - initial_points2;
 
             f64 reproj_error = 0;
-            std::vector<memory_index> reprojection_inliers; // NOTE(rahul): u16 or u32?
+            std::vector<memory_index> reprojection_inliers;
             for (memory_index i = 0; i < d1.rows; i++) {
                 f32 re1 = d1.row(i).dot(d1.row(i));
                 if (re1 > thresholdSq) continue;

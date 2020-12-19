@@ -41,8 +41,22 @@ void add_reprojection_inliers(PointMap &pm, const cv::Mat &points_4d, const std:
         points_data[j]     = p4d_data[i];
         points_data[j + 1] = p4d_data[i + 1];
         points_data[j + 2] = p4d_data[i + 2];
-        points_data[j + 3] = p4d_data[i + 3];
+        points_data[j + 3] = 1;
         j += 4;
     }
     pm.size += num_new_points;
+    pm.frame_ids.resize(pm.size);
+    pm.frame_point_ids.resize(pm.size);
+}
+
+u32 orb_distance(const PointMap &pm, memory_index map_point_id, const Frame &frame, memory_index frame_point_id) {
+    u32 min = u32_max;
+    const std::vector<memory_index> &frame_ids = pm.frame_ids[map_point_id];
+    const std::vector<memory_index> &frame_point_ids = pm.frame_point_ids[map_point_id];
+    // NOTE(rahul): size of both vectors should be the same
+    for (memory_index i = 0; i < frame_ids.size(); i++) {
+        u32 curr = cv::norm(frame.descriptors.row(frame_point_id), pm.frames[frame_ids[i]].descriptors.row(frame_point_ids[i]), cv::NORM_HAMMING);
+        if (curr < min) min = curr;
+    }
+    return min;
 }

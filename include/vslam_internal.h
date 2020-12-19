@@ -18,6 +18,9 @@ typedef uint64_t u64;
 
 typedef size_t memory_index; //use for going into memory
 
+
+#define u32_max ((u32) - 1)
+
 #define f32_maximum FLT_MAX
 
 typedef float  f32;

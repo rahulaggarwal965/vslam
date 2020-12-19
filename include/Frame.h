@@ -18,9 +18,10 @@ struct Frame {
 
     /* std::vector<cv::KeyPoint> keypoints; */
     std::vector<cv::Point2f> points;
+    std::vector<s64> map_point_ids;
     cv::Mat descriptors;
 
-    KDTree kdtree;
+    frame_kdtree kdtree;
 
     long id;
 };
