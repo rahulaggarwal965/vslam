@@ -14,13 +14,13 @@ struct PointMap {
     cv::Mat points;
     std::vector<std::vector<memory_index>> frame_ids;
     std::vector<std::vector<memory_index>> frame_point_ids;
+    std::vector<cv::Point3_<u8>> colors;
 
 
     std::vector<Frame> frames;
 };
 
-void add_points(PointMap &pm, const cv::Mat &new_points);
-void add_reprojection_inliers(PointMap &pm, const cv::Mat &points_4d, const std::vector<memory_index> &reprojection_inliers);
+void add_reprojection_inliers(PointMap &pm, const cv::Mat &points_4d, const std::vector<memory_index> &reprojection_inliers, const std::vector<cv::Point3_<u8>> &colors, u64 last_frame_id, u64 frame_id, const std::vector<std::pair<int, int>> &matches);
 u32 orb_distance(const PointMap &pm, memory_index map_point_id, const Frame &frame, memory_index frame_point_id);
 
 #endif

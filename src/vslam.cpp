@@ -55,12 +55,15 @@ int main(int argc, char **argv) {
 
         pm.frames.emplace_back();
         Frame &frame = pm.frames.back();
+
+        // TODO(rahul): put cap directly into frame image
         initialize_frame(frame, image, frame_cnt);
 
         // NOTE(rahul): orb vs "good feature extraction (Shi-Tomasi Corner Detection)"
         /* extract_features(f, 5, 5); */
         extract_features(frame);
 
+        // TODO(rahul): extra compare literally once. hard code first frame probably
         if (frame_cnt == 0) {
             frame.pose = cv::Mat::eye(4, 4, CV_32F);
             frame.R_t = cv::Mat::eye(4, 4, CV_32F);
@@ -73,7 +76,6 @@ int main(int argc, char **argv) {
             // we match from last frame to next frame (this = x2)
             match_features(last_frame, frame, rf, matches, fundamental);
             // match_features(last_keypoints, keypoints, lastDescriptors, descriptors, rf, matches, fundamental);
-
 
             // Relative rotation (from last frame to this)
             cv::Mat rotation, translation;
@@ -105,6 +107,15 @@ int main(int argc, char **argv) {
                 /* initial_points1.at<float>(1, i) = last_frame.points[m.first].y; */
                 /* initial_points2.at<float>(0, i) = frame.points[m.second].x; */
                 /* initial_points2.at<float>(1, i) = frame.points[m.second].y; */
+
+                // copy matching map_point_id per match to next frame
+                // NOTE(rahul): we could just set the next frame point_id either way to avoid a cmpjmp
+                const s32 last_frame_map_point_id = last_frame.map_point_ids[m.first];
+                if (last_frame_map_point_id > 0) {
+                    frame.map_point_ids[m.second] = last_frame_map_point_id;
+                    pm.frame_ids[last_frame_map_point_id].push_back(frame.id);
+                    pm.frame_point_ids[last_frame_map_point_id].push_back(m.second);
+                }
 
                 cv::line(annotated, last_frame.points[m.first], frame.points[m.second], cv::Scalar(0,0, 255));
             }
@@ -222,13 +233,19 @@ int main(int argc, char **argv) {
 
             f64 reproj_error = 0;
             std::vector<memory_index> reprojection_inliers;
-            for (memory_index i = 0; i < d1.rows; i++) {
+            std::vector<cv::Point3_<u8>> colors;
+            for (memory_index i = 0, j = 0; i < d1.rows; i++, j += 2) {
+                // TODO(rahul): by doing this here we have to do a crazy amount of extra work above
+                if (frame.map_point_ids[i] > 0) continue;
                 f32 re1 = d1.row(i).dot(d1.row(i));
                 if (re1 > thresholdSq) continue;
                 f32 re2 = d2.row(i).dot(d2.row(i));
                 if (re2 > thresholdSq) continue;
                 else {
                     reprojection_inliers.push_back(i);
+                    // NOTE(rahul): remove .at for no bounds checking
+                    /* colors.push_back(frame.image.at<cv::Point3i>(initial_points_data2[j], initial_points_data2[j + 1])); */
+                    colors.push_back(frame.image.at<cv::Point3_<u8>>(initial_points_data2[j], initial_points_data2[j + 1]));
                     reproj_error += re1 + re2;
                 }
             }
@@ -246,13 +263,14 @@ int main(int argc, char **argv) {
 
             mtx.lock();
 
-            add_reprojection_inliers(pm, points_4d, reprojection_inliers);
+            add_reprojection_inliers(pm, points_4d, reprojection_inliers, colors, last_frame.id, frame.id, matches);
 
             /* for (int i : reprojection_inliers) { */
             /*     points.emplace_back(points_4d.at<float>(0, i), points_4d.at<float>(1, i), points_4d.at<float>(2, i)); */
             /* } */
 
             display.ds.points = &pm.points;
+            display.ds.colors = &pm.colors;
             display.ds.size = pm.size;
             display.ds.frames = &pm.frames;
             mtx.unlock();
@@ -266,7 +284,7 @@ int main(int argc, char **argv) {
             /* write_matrix(d1, str, fs); */
 
             cv::imshow("points", annotated);
-            if (cv::waitKey(1) == 113) {
+            if (cv::waitKey(0) == 113) {
                 display.close();
                 break;
             }

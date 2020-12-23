@@ -13,6 +13,7 @@ struct DisplayState {
     cv::Mat *points = NULL;
     memory_index size = 0;
     std::vector<Frame> *frames = NULL;
+    std::vector<cv::Point3_<u8>> *colors = NULL;
 };
 
 class Display {
@@ -29,6 +30,7 @@ class Display {
 
         void draw_points(const std::vector<cv::Point3f> &points);
         void draw_points(const cv::Mat &points, const memory_index size);
+        void draw_points_colors(const cv::Mat &points, const std::vector<cv::Point3_<u8>> &colors, const memory_index size);
         void draw_box(const cv::Mat &pose, float w = 1.0, float h_ratio = 0.75, float z_ratio = 0.6);
         void draw_boxes(std::vector<cv::Mat*> boxes, float w=1.0, float h_ratio=0.75, float z_ratio=0.6);
 

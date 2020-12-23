@@ -18,12 +18,12 @@ struct Frame {
 
     /* std::vector<cv::KeyPoint> keypoints; */
     std::vector<cv::Point2f> points;
-    std::vector<s64> map_point_ids;
+    std::vector<s32> map_point_ids;
     cv::Mat descriptors;
 
     frame_kdtree kdtree;
 
-    long id;
+    u64 id;
 };
 
 void initialize_frame(Frame &frame, const cv::Mat &image, long frame_id);
