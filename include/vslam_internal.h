@@ -16,7 +16,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-typedef size_t memory_index; //use for going into memory
+typedef size_t usize; //use for going into memory
 
 
 #define u32_max ((u32) - 1)

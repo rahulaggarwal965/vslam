@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
             cv::Mat initial_points2(matches.size(), 2, CV_32FC1);
             f32 *initial_points_data1 = initial_points1.ptr<float>();
             f32 *initial_points_data2 = initial_points2.ptr<float>();
-            for (memory_index i = 0, j = 0; i < matches.size(); i++, j += 2) {
+            for (usize i = 0, j = 0; i < matches.size(); i++, j += 2) {
                 const std::pair<int, int>& m = matches[i];
                 initial_points_data1[j]     = last_frame.points[m.first].x;
                 initial_points_data1[j + 1] = last_frame.points[m.first].y;
@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
                 std::vector<bool> current_frame_inliers(pm.size, false);
                 // make non homogeneous
                 float *projected_map_points_data = projected_map_points.ptr<f32>();
-                for (memory_index i = 0, j = 0; i < projected_map_points.rows; i++, j += 3) {
+                for (usize i = 0, j = 0; i < projected_map_points.rows; i++, j += 3) {
                     const f32 h = projected_map_points_data[j + 2];
                     f32 &x = projected_map_points_data[j + 0];
                     f32 &y = projected_map_points_data[j + 1];
@@ -143,11 +143,11 @@ int main(int argc, char **argv) {
                     }
                 }
 
-                for (memory_index i = 0, j = 0; i < pm.size; i++, j += 3) {
+                for (usize i = 0, j = 0; i < pm.size; i++, j += 3) {
                     if (!current_frame_inliers[i]) continue;
                     const cv::Point2f &query_pt = {projected_map_points_data[j], projected_map_points_data[j + 1]};
-                    std::vector<memory_index> indices = radius_search(frame.kdtree, frame.points, query_pt, 2);
-                    for (memory_index idx : indices) {
+                    std::vector<usize> indices = radius_search(frame.kdtree, frame.points, query_pt, 2);
+                    for (usize idx : indices) {
                         if (frame.map_point_ids[idx] >= 0) continue;
                         u32 dist = orb_distance(pm, i, frame, idx);
                         if (dist < DISTANCE_THRESHOLD) {
@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
             /*     } */
             /* } */
 
-            /* for (memory_index i = 0; i < pm.size; i++) { */
+            /* for (usize i = 0; i < pm.size; i++) { */
             /*     if (current_frame_inliers[i]) { */
             /*         const cv::Point2f query_pt = {projected_map_points.at<float>(0, i), (projected_map_points.at<float>(1, i))}; */
             /*         std::vector<cv::Point2f> pts = radius_search(frame.kdtree, query_pt, 2); */
@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
 
             f32 *reproj_points_data1 = reproj_points1.ptr<f32>();
             f32 *reproj_points_data2 = reproj_points2.ptr<f32>();
-            for (memory_index i = 0; i < reproj_points1.rows; i += 3) {
+            for (usize i = 0; i < reproj_points1.rows; i += 3) {
                 f32 &h1 = reproj_points_data1[i + 2];
                 reproj_points_data1[i]     /= h1;
                 reproj_points_data1[i + 1] /= h1;
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
             /*     cv::Point2f pt(reproj_points2.at<float>(0, i), reproj_points2.at<float>(1, i)); */
             /*     cv::circle(annotated, pt, 2, cv::Scalar(255, 0, 0)); */
             /* } */
-            for (memory_index i = 0; i < reproj_points2.rows; i += 3) {
+            for (usize i = 0; i < reproj_points2.rows; i += 3) {
                 const cv::Point2f pt(reproj_points_data2[i], reproj_points_data2[i + 1]);
                 /* const cv::Point2f pt(reproj_points2.at<float>(0, i), reproj_points2.at<float>(1, i)); */
                 cv::circle(annotated, pt, 2, cv::Scalar(255, 0, 0));
@@ -232,9 +232,9 @@ int main(int argc, char **argv) {
             cv::Mat d2 = reproj_points2 - initial_points2;
 
             f64 reproj_error = 0;
-            std::vector<memory_index> reprojection_inliers;
+            std::vector<usize> reprojection_inliers;
             std::vector<cv::Point3_<u8>> colors;
-            for (memory_index i = 0, j = 0; i < d1.rows; i++, j += 2) {
+            for (usize i = 0, j = 0; i < d1.rows; i++, j += 2) {
                 // TODO(rahul): by doing this here we have to do a crazy amount of extra work above
                 if (frame.map_point_ids[i] > 0) continue;
                 f32 re1 = d1.row(i).dot(d1.row(i));
@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
             /* write_matrix(d1, str, fs); */
 
             cv::imshow("points", annotated);
-            if (cv::waitKey(0) == 113) {
+            if (cv::waitKey(15) == 113) {
                 display.close();
                 break;
             }

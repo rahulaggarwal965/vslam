@@ -87,7 +87,7 @@ void match_features(const Frame &frame1, const Frame &frame2, RansacFilter &rf, 
     std::vector<std::pair<int, int>> i_matches;
 
     for (std::vector<cv::DMatch> m : initialMatches) {
-        //lowes
+        //lowes (ratio test)
         if (m[0].distance < m[1].distance * 0.7) {
             i_matches.push_back(std::make_pair(m[0].queryIdx, m[0].trainIdx));
         }

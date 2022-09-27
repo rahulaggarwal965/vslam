@@ -8,19 +8,19 @@
 #include "vslam_internal.h"
 
 struct PointMap {
-    memory_index size = 0;
-    memory_index capacity = 0;
+    usize size = 0;
+    usize capacity = 0;
 
     cv::Mat points;
-    std::vector<std::vector<memory_index>> frame_ids;
-    std::vector<std::vector<memory_index>> frame_point_ids;
+    std::vector<std::vector<usize>> frame_ids;
+    std::vector<std::vector<usize>> frame_point_ids;
     std::vector<cv::Point3_<u8>> colors;
 
 
     std::vector<Frame> frames;
 };
 
-void add_reprojection_inliers(PointMap &pm, const cv::Mat &points_4d, const std::vector<memory_index> &reprojection_inliers, const std::vector<cv::Point3_<u8>> &colors, u64 last_frame_id, u64 frame_id, const std::vector<std::pair<int, int>> &matches);
-u32 orb_distance(const PointMap &pm, memory_index map_point_id, const Frame &frame, memory_index frame_point_id);
+void add_reprojection_inliers(PointMap &pm, const cv::Mat &points_4d, const std::vector<usize> &reprojection_inliers, const std::vector<cv::Point3_<u8>> &colors, u64 last_frame_id, u64 frame_id, const std::vector<std::pair<int, int>> &matches);
+u32 orb_distance(const PointMap &pm, usize map_point_id, const Frame &frame, usize frame_point_id);
 
 #endif

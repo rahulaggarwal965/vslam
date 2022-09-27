@@ -46,7 +46,7 @@ void radius_search(KDTree::KDTreeNode *node, const cv::Point2f &query_pt, std::v
 
 struct frame_kdtree {
     struct KDTreeNode {
-        memory_index pt_index;
+        usize pt_index;
         KDTreeNode *left;
         KDTreeNode *right;
     };
@@ -58,9 +58,9 @@ struct frame_kdtree {
 
 
 void construct_kdtree(frame_kdtree &kdtree, const std::vector<cv::Point2f> &points);
-frame_kdtree::KDTreeNode *construct_kdtree(frame_kdtree &kdtree, const std::vector<cv::Point2f> &points, std::vector<memory_index> &point_indices,
-                                     const std::vector<memory_index>::iterator l,
-                                     const std::vector<memory_index>::iterator r, int axis);
+frame_kdtree::KDTreeNode *construct_kdtree(frame_kdtree &kdtree, const std::vector<cv::Point2f> &points, std::vector<usize> &point_indices,
+                                     const std::vector<usize>::iterator l,
+                                     const std::vector<usize>::iterator r, int axis);
 
 cv::Point2f nearest(const frame_kdtree &kdtree, const cv::Point2f &query_pt, float max_distance_sq = INFINITY);
 void nearest(frame_kdtree::KDTreeNode *node, const cv::Point2f &query_pt, int axis, cv::Point2f *best_pt,
@@ -76,8 +76,8 @@ void nearest_approx(frame_kdtree::KDTreeNode *node, const cv::Point2f &query_pt,
 /* void k_nearest(frame_kdtree::KDTreeNode *node, const cv::Point2f &query_pt, int k, int axis, cv::Point2f *best_pt, */
 /*                float *best_distance_sq); */
 
-std::vector<memory_index> radius_search(const frame_kdtree kdtree, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, float radius);
-void radius_search(frame_kdtree::KDTreeNode *node, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, std::vector<memory_index> &indices, float radius, float radius_sq, int axis);
+std::vector<usize> radius_search(const frame_kdtree kdtree, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, float radius);
+void radius_search(frame_kdtree::KDTreeNode *node, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, std::vector<usize> &indices, float radius, float radius_sq, int axis);
 
 
 #endif

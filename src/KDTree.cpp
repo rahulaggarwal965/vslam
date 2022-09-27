@@ -105,29 +105,29 @@ void radius_search(KDTree::KDTreeNode *node, const cv::Point2f &query_pt, std::v
    */
 
 void construct_kdtree(frame_kdtree &kdtree, const std::vector<cv::Point2f> &points) {
-    memory_index N = points.size();
+    usize N = points.size();
     if (N == 0) {
         kdtree.root = NULL;
     } else {
         kdtree.root = (frame_kdtree::KDTreeNode *)malloc(N * sizeof(frame_kdtree::KDTreeNode));
-        std::vector<memory_index> point_indices;
+        std::vector<usize> point_indices;
         point_indices.reserve(points.size());
-        for (memory_index i = 0; i < N; i++) {
+        for (usize i = 0; i < N; i++) {
             point_indices.push_back(i);
         }
         construct_kdtree(kdtree, points, point_indices, point_indices.begin(), point_indices.end(), 0);
         kdtree.height = floor(log2(N)) + 1;
     }
 }
-frame_kdtree::KDTreeNode *construct_kdtree(frame_kdtree &kdtree, const std::vector<cv::Point2f> &points, std::vector<memory_index> &point_indices,
-                                           const std::vector<memory_index>::iterator l,
-                                           const std::vector<memory_index>::iterator r, int axis) {
+frame_kdtree::KDTreeNode *construct_kdtree(frame_kdtree &kdtree, const std::vector<cv::Point2f> &points, std::vector<usize> &point_indices,
+                                           const std::vector<usize>::iterator l,
+                                           const std::vector<usize>::iterator r, int axis) {
     if (l < r) {
         const size_t len = r - l;
         auto m = l + len / 2;
-        std::nth_element(l, m, r, [points, axis](const memory_index &i1, const memory_index &i2) -> bool {return P(points[i1], axis) < P(points[i2], axis); });
+        std::nth_element(l, m, r, [points, axis](const usize &i1, const usize &i2) -> bool {return P(points[i1], axis) < P(points[i2], axis); });
         /* if (axis == 0) { */
-        /*     std::nth_element(l, m, r, [points](const memory_index &i1, const memory_index &i2) -> bool { return points[i1].x < points[i2].x; }); */
+        /*     std::nth_element(l, m, r, [points](const usize &i1, const usize &i2) -> bool { return points[i1].x < points[i2].x; }); */
         /* } else { */
         /*     std::nth_element(l, m, r, [](const cv::Point2f &p1, const cv::Point2f &p2) -> bool { return p1.y < p2.y; }); */
         /* } */
@@ -142,13 +142,13 @@ frame_kdtree::KDTreeNode *construct_kdtree(frame_kdtree &kdtree, const std::vect
     return NULL;
 }
 
-std::vector<memory_index> radius_search(const frame_kdtree kdtree, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, float radius) {
+std::vector<usize> radius_search(const frame_kdtree kdtree, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, float radius) {
     float radius_sq = SQ(radius);
-    std::vector<memory_index> indices;
+    std::vector<usize> indices;
     radius_search(kdtree.root, points, query_pt, indices, radius, radius_sq, 0);
     return indices;
 }
-void radius_search(frame_kdtree::KDTreeNode *node, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, std::vector<memory_index> &indices, float radius, float radius_sq, int axis) {
+void radius_search(frame_kdtree::KDTreeNode *node, const std::vector<cv::Point2f> &points, const cv::Point2f &query_pt, std::vector<usize> &indices, float radius, float radius_sq, int axis) {
     if (node == NULL) {
         return;
     }

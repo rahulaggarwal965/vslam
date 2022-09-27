@@ -1,10 +1,10 @@
 # Compiler
 CC = g++
 CPPFLAGS := -Iinclude -MMD -MP
-CFLAGS := $(shell pkg-config --cflags opencv4 eigen3 g2o pangolin) -Wall -std=c++11
+CFLAGS := $(shell pkg-config --cflags opencv4 eigen3 pangolin) -Wall -std=c++11
 
 # Linker
-LDFLAGS := $(shell pkg-config --libs opencv4 g2o glew pangolin)
+LDFLAGS := $(shell pkg-config --libs opencv4 glew pangolin)
 LDLIBS := -pthread -lm
 
 # Project Directories

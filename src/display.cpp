@@ -78,7 +78,7 @@ void Display::draw_points(const std::vector<cv::Point3f> &points) {
     glEnd();
 }
 
-void Display::draw_points(const cv::Mat &points, const memory_index size) {
+void Display::draw_points(const cv::Mat &points, const usize size) {
     glBegin(GL_POINTS);
     if (!points.isContinuous()) {
         fprintf(stderr, "Error: not continuous in %s, line %d\n", __FILE__, __LINE__);
@@ -87,14 +87,14 @@ void Display::draw_points(const cv::Mat &points, const memory_index size) {
     // NOTE(rahul): expect points to be Nx4 and continuous ...
     /* float *data = (float *) points.data; */
     const float *data = points.ptr<float>(0);
-    for (memory_index i = 0; i < size; i += 4) {
+    for (usize i = 0; i < size; i += 4) {
         glVertex3d(data[i], data[i + 1], data[i + 2]);
         /* glVertex3d(points[i].x, points[i].y, points[i].z); */
     }
     glEnd();
 }
 
-void Display::draw_points_colors(const cv::Mat &points, const std::vector<cv::Point3_<u8>> &colors, const memory_index size) {
+void Display::draw_points_colors(const cv::Mat &points, const std::vector<cv::Point3_<u8>> &colors, const usize size) {
     glBegin(GL_POINTS);
     if (!points.isContinuous()) {
         fprintf(stderr, "Error: not continuous in %s, line %d\n", __FILE__, __LINE__);
@@ -103,7 +103,7 @@ void Display::draw_points_colors(const cv::Mat &points, const std::vector<cv::Po
     // NOTE(rahul): expect points to be Nx4 and continuous ...
     /* float *data = (float *) points.data; */
     const f32 *data = points.ptr<f32>();
-    for (memory_index i = 0, j = 0; i < size; i += 4, j++) {
+    for (usize i = 0, j = 0; i < size; i += 4, j++) {
         if (j >= colors.size()) {
             /* fprintf(stderr, "Accessed color index %zu out of color size %zu\n", j, colors.size()); */
         } else {

@@ -36,7 +36,7 @@ void extract_Rt(const cv::Mat &fundamental, const cv::Mat &K, cv::Mat &rotation,
 
 void triangulate(const cv::Mat &p1, const cv::Mat &p2, const cv::Mat &c1, const cv::Mat &c2, cv::Mat &points_4d) {
     cv::Mat A(4, 4, CV_32F);
-    const memory_index N = p1.rows;
+    const usize N = p1.rows;
     /* points_4d = cv::Mat(4, N, CV_32F); */
     points_4d = cv::Mat(N, 4, CV_32F);
     f32 *p4d_data = points_4d.ptr<f32>();
@@ -45,7 +45,7 @@ void triangulate(const cv::Mat &p1, const cv::Mat &p2, const cv::Mat &c1, const 
     const f32 *p2_data = p2.ptr<f32>();
 
     /* printf("Least Singular Values: "); */
-    for (memory_index i = 0, j = 0, k = 0; i < N; i++, j += 2, k += 4) {
+    for (usize i = 0, j = 0, k = 0; i < N; i++, j += 2, k += 4) {
         A.row(0) = p1_data[j]     * c1.row(2) - c1.row(0);
         A.row(1) = p1_data[j + 1] * c1.row(2) - c1.row(1);
         A.row(2) = p2_data[j]     * c2.row(2) - c2.row(0);
